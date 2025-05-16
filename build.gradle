@@ -1,0 +1,73 @@
+plugins {
+    id 'java-library'
+    id "io.freefair.lombok" version "8.6"
+    id "com.diffplug.spotless" version "7.2.1"
+}
+
+group = 'dev.dnpm'
+version = '0.1.0-SNAPSHOT'
+description = 'Erweiterte REST API für Onkostar'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+repositories {
+    mavenCentral()
+    // Ignore the next two maven repositories if you want to use a local build
+    maven {
+        url = uri("https://git.dnpm.dev/api/packages/public-snapshots/maven")
+    }
+    maven {
+        url = uri("https://git.dnpm.dev/api/packages/public/maven")
+    }
+    // Local repository for local dependency build
+    mavenLocal()
+}
+
+ext {
+    onkostarVersion = '2.14.0'
+    springVersion = '4.3.8.RELEASE'
+    slf4jVersion = '1.7.2'
+    junitVersion = '5.14.2'
+    junitPlatformVersion = '1.14.2'
+    assertjVersion = '3.27.7'
+    mockitoVersion = '5.21.0'
+}
+
+dependencies {
+    implementation files("./libs/onkostar-api-${onkostarVersion}.jar")
+
+    implementation "dev.pcvolkmer.mv64e:mtb-dto:0.2.0"
+    implementation "org.springframework:spring-beans:${springVersion}"
+    implementation "org.springframework:spring-context:${springVersion}"
+    implementation "org.springframework:spring-webmvc:${springVersion}"
+    implementation "org.springframework:spring-jdbc:${springVersion}"
+    implementation "org.springframework.security:spring-security-core:4.2.2.RELEASE"
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    testImplementation "org.springframework:spring-test:${springVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    testImplementation "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    testImplementation "ca.uhn.hapi:hapi-structures-v26:2.3"
+    testImplementation "org.hibernate:hibernate-core:4.3.11.Final"
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    //dependsOn(tasks.spotlessCheck)
+}
+
+spotless {
+    java {
+        //importOrder()
+        //removeUnusedImports()
+        //googleJavaFormat()
+    }
+}
