@@ -1,0 +1,111 @@
+/*
+ * This file is part of onkostar-plugin-xapi
+ *
+ * Copyright (C) 2026 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package dev.dnpm.onkostar.xapi.security;
+
+import de.itc.onkostar.api.IOnkostarApi;
+import de.itc.onkostar.api.Patient;
+import de.itc.onkostar.api.Procedure;
+import java.io.Serializable;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
+/**
+ * Permission-Evaluator zur Auswertung der Berechtigung auf Objekte aufgrund der
+ * Personenstammberechtigung
+ */
+@Component
+public class PersonPoolBasedPermissionEvaluator extends AbstractDelegatedPermissionEvaluator {
+
+  public PersonPoolBasedPermissionEvaluator(
+      final IOnkostarApi onkostarApi, final SecurityService securityService) {
+    super(onkostarApi, securityService);
+  }
+
+  /**
+   * Auswertung der Zugriffsberechtigung für authentifizierten Benutzer auf Zielobjekt mit
+   * angeforderter Berechtigung.
+   *
+   * @param authentication Das Authentication Objekt
+   * @param targetObject Das Zielobjekt
+   * @param permissionType Die angeforderte Berechtigung
+   * @return Gibt <code>true</code> zurück, wenn der Benutzer die Berechtigung hat
+   */
+  @Override
+  public boolean hasPermission(
+      Authentication authentication, Object targetObject, Object permissionType) {
+    if (permissionType instanceof PermissionType) {
+      if (targetObject instanceof Patient) {
+        return this.securityService
+            .getPersonPoolIdsForPermission(authentication, (PermissionType) permissionType)
+            .contains(((Patient) targetObject).getPersonPoolCode());
+      } else if (targetObject instanceof Procedure) {
+        return this.securityService
+            .getPersonPoolIdsForPermission(authentication, (PermissionType) permissionType)
+            .contains(((Procedure) targetObject).getPatient().getPersonPoolCode());
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Auswertung anhand der ID und des Namens des Zielobjekts.
+   *
+   * @param authentication Authentication-Object
+   * @param targetId ID des Objekts
+   * @param targetType Name der Zielobjektklasse
+   * @param permissionType Die angeforderte Berechtigung
+   * @return Gibt <code>true</code> zurück, wenn der Benutzer die Berechtigung hat
+   */
+  @Override
+  public boolean hasPermission(
+      Authentication authentication,
+      Serializable targetId,
+      String targetType,
+      Object permissionType) {
+    if (targetId instanceof Integer && permissionType instanceof PermissionType) {
+      var personPoolCode = getPersonPoolCode((int) targetId, targetType);
+      if (null != personPoolCode) {
+        return this.securityService
+            .getPersonPoolIdsForPermission(authentication, (PermissionType) permissionType)
+            .contains(personPoolCode);
+      }
+    }
+    return false;
+  }
+
+  private String getPersonPoolCode(int id, String type) {
+    Patient patient = null;
+
+    if (PATIENT.equals(type)) {
+      patient = onkostarApi.getPatient(id);
+    } else if (PROCEDURE.equals(type)) {
+      var procedure = onkostarApi.getProcedure(id);
+      if (null != procedure) {
+        patient = procedure.getPatient();
+      }
+    }
+
+    if (null != patient) {
+      return patient.getPersonPoolCode();
+    }
+
+    return null;
+  }
+}

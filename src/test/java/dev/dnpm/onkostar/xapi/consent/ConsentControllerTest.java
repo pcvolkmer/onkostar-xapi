@@ -1,3 +1,22 @@
+/*
+ * This file is part of onkostar-plugin-xapi
+ *
+ * Copyright (C) 2026 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package dev.dnpm.onkostar.xapi.consent;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -9,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Patient;
 import de.itc.onkostar.api.Procedure;
+import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,12 +46,19 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class ConsentControllerTest {
 
   private IOnkostarApi onkostarApi;
+  private DelegatingDataBasedPermissionEvaluator permissionEvaluator;
   private MockMvc mockMvc;
 
   @BeforeEach
-  void setUp(@Mock IOnkostarApi onkostarApi) {
+  void setUp(
+      @Mock IOnkostarApi onkostarApi,
+      @Mock DelegatingDataBasedPermissionEvaluator permissionEvaluator) {
     this.onkostarApi = onkostarApi;
-    this.mockMvc = MockMvcBuilders.standaloneSetup(new ConsentController(this.onkostarApi)).build();
+    this.permissionEvaluator = permissionEvaluator;
+    this.mockMvc =
+        MockMvcBuilders.standaloneSetup(
+                new ConsentController(this.onkostarApi, this.permissionEvaluator))
+            .build();
   }
 
   @ParameterizedTest
@@ -45,6 +72,8 @@ class ConsentControllerTest {
     patient.setId(1);
     patient.setPatientId("12345678");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
+
+    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(true);
 
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
@@ -75,6 +104,8 @@ class ConsentControllerTest {
     procedure.setId(42);
     when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
         .thenReturn(List.of(procedure));
+
+    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(true);
 
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
@@ -152,6 +183,31 @@ class ConsentControllerTest {
     this.mockMvc
         .perform(put(consentUrl).contentType("application/json").content("{\"value\": \"test\"}"))
         .andExpect(status().isUnprocessableEntity());
+
+    verify(onkostarApi, times(0)).saveProcedure(any(), eq(false));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "consent/genom-de_consent.json, /x-api/patient/12345678/consent/mv64e",
+    "consent/mii_consent.json, /x-api/patient/12345678/consent/research"
+  })
+  void testShouldNotSaveConsentIfNoPermission(final String consentFile, final String consentUrl)
+      throws Exception {
+    var patient = new Patient(this.onkostarApi);
+    patient.setId(1);
+    patient.setPatientId("12345678");
+    when(onkostarApi.getPatient(anyString())).thenReturn(patient);
+
+    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(false);
+
+    var consent =
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
+            .readAllBytes();
+
+    this.mockMvc
+        .perform(put(consentUrl).contentType("application/json").content(consent))
+        .andExpect(status().isForbidden());
 
     verify(onkostarApi, times(0)).saveProcedure(any(), eq(false));
   }

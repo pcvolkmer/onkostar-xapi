@@ -17,15 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.dnpm.onkostar.xapi.consent.idat;
+package dev.dnpm.onkostar.xapi.security;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
-import lombok.Data;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@Data
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ConsentIdat {
-  private ConsentKey consentKey;
-  private List<PolicyState> currentPolicyStates;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface PersonPoolSecured {
+
+  PermissionType value() default PermissionType.READ_WRITE;
 }

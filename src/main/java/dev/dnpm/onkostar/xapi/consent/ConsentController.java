@@ -1,3 +1,22 @@
+/*
+ * This file is part of onkostar-plugin-xapi
+ *
+ * Copyright (C) 2026 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package dev.dnpm.onkostar.xapi.consent;
 
 import de.itc.onkostar.api.IOnkostarApi;
@@ -8,11 +27,14 @@ import de.itc.onkostar.api.filter.IProcedureFilter;
 import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
 import dev.dnpm.onkostar.xapi.consent.idat.ConsentIdat;
+import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
+import dev.dnpm.onkostar.xapi.security.PermissionType;
 import dev.pcvolkmer.mv64e.mtb.ConsentProvision;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,10 +45,14 @@ public class ConsentController {
 
   private static final Logger log = LoggerFactory.getLogger(ConsentController.class);
 
-  private IOnkostarApi onkostarApi;
+  private final IOnkostarApi onkostarApi;
+  private final DelegatingDataBasedPermissionEvaluator permissionEvaluator;
 
-  public ConsentController(final IOnkostarApi onkostarApi) {
+  public ConsentController(
+      final IOnkostarApi onkostarApi,
+      final DelegatingDataBasedPermissionEvaluator permissionEvaluator) {
     this.onkostarApi = onkostarApi;
+    this.permissionEvaluator = permissionEvaluator;
   }
 
   @PutMapping("/x-api/patient/{pid}/consent/research")
@@ -82,6 +108,13 @@ public class ConsentController {
     procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
 
     procedure.setValue("ebroadconsentpresent", new Item("ebroadconsentpresent", true));
+
+    if (!permissionEvaluator.hasPermission(
+        SecurityContextHolder.getContext().getAuthentication(),
+        procedure.getId(),
+        PermissionType.READ_WRITE)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
 
     try {
       onkostarApi.saveProcedure(procedure, false);
@@ -169,6 +202,13 @@ public class ConsentController {
           new Item("version", consent.getConsentKey().getConsentTemplateKey().getVersion()));
       updateProvisions(verlauf, consent);
       procedure.addSubProcedure("Verlauf", verlauf);
+    }
+
+    if (!permissionEvaluator.hasPermission(
+        SecurityContextHolder.getContext().getAuthentication(),
+        procedure.getId(),
+        PermissionType.READ_WRITE)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
     try {

@@ -1,0 +1,212 @@
+/*
+ * This file is part of onkostar-plugin-xapi
+ *
+ * Copyright (C) 2026 the original author or authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package dev.dnpm.onkostar.xapi.security;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
+
+import de.itc.onkostar.api.IOnkostarApi;
+import de.itc.onkostar.api.Patient;
+import de.itc.onkostar.api.Procedure;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+
+@ExtendWith(MockitoExtension.class)
+class PersonPoolBasedPermissionEvaluatorTest {
+
+  private IOnkostarApi onkostarApi;
+
+  private Authentication dummyAuthentication;
+
+  private PersonPoolBasedPermissionEvaluator permissionEvaluator;
+
+  @BeforeEach
+  void setup(
+      @Mock IOnkostarApi onkostarApi,
+      @Mock SecurityService securityService,
+      @Mock DummyAuthentication dummyAuthentication) {
+    this.onkostarApi = onkostarApi;
+    this.dummyAuthentication = dummyAuthentication;
+
+    this.permissionEvaluator = new PersonPoolBasedPermissionEvaluator(onkostarApi, securityService);
+
+    when(securityService.getPersonPoolIdsForPermission(
+            any(Authentication.class), any(PermissionType.class)))
+        .thenReturn(List.of("Pool2", "Pool3", "Pool5"));
+  }
+
+  @Test
+  void testShouldGrantPermissionByPatientObject() {
+    var object = new Patient(onkostarApi);
+    object.setPersonPoolCode("Pool2");
+
+    var actual =
+        permissionEvaluator.hasPermission(this.dummyAuthentication, object, PermissionType.READ);
+
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void testShouldGrantPermissionByPatientIdAndType() {
+    doAnswer(
+            invocationOnMock -> {
+              var object = new Patient(onkostarApi);
+              object.setPersonPoolCode("Pool2");
+              return object;
+            })
+        .when(onkostarApi)
+        .getPatient(anyInt());
+
+    var actual =
+        permissionEvaluator.hasPermission(
+            this.dummyAuthentication,
+            123,
+            PersonPoolBasedPermissionEvaluator.PATIENT,
+            PermissionType.READ);
+
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void testShouldDenyPermissionByPatientObject() {
+    var object = new Patient(onkostarApi);
+    object.setPersonPoolCode("Pool1");
+
+    var actual =
+        permissionEvaluator.hasPermission(this.dummyAuthentication, object, PermissionType.READ);
+
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void testShouldDenyPermissionByPatientIdAndType() {
+    doAnswer(
+            invocationOnMock -> {
+              var object = new Patient(onkostarApi);
+              object.setPersonPoolCode("Pool1");
+              return object;
+            })
+        .when(onkostarApi)
+        .getPatient(anyInt());
+
+    var actual =
+        permissionEvaluator.hasPermission(
+            this.dummyAuthentication,
+            123,
+            PersonPoolBasedPermissionEvaluator.PATIENT,
+            PermissionType.READ);
+
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void testShouldGrantPermissionByProcedureObject() {
+    var patient = new Patient(onkostarApi);
+    patient.setId(1);
+    patient.setPersonPoolCode("Pool2");
+
+    var object = new Procedure(onkostarApi);
+    object.setFormName("OS.Form1");
+    object.setPatient(patient);
+
+    var actual =
+        permissionEvaluator.hasPermission(this.dummyAuthentication, object, PermissionType.READ);
+
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void testShouldGrantPermissionByProcedureIdAndType() {
+    doAnswer(
+            invocationOnMock -> {
+              var patient = new Patient(onkostarApi);
+              patient.setId(1);
+              patient.setPersonPoolCode("Pool2");
+
+              var object = new Procedure(onkostarApi);
+              object.setFormName("OS.Form1");
+              object.setPatient(patient);
+
+              return object;
+            })
+        .when(onkostarApi)
+        .getProcedure(anyInt());
+
+    var actual =
+        permissionEvaluator.hasPermission(
+            this.dummyAuthentication,
+            456,
+            PersonPoolBasedPermissionEvaluator.PROCEDURE,
+            PermissionType.READ);
+
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void testShouldDenyPermissionByProcedureObject() {
+    var patient = new Patient(onkostarApi);
+    patient.setId(1);
+    patient.setPersonPoolCode("Pool1");
+
+    var object = new Procedure(onkostarApi);
+    object.setFormName("OS.Form1");
+    object.setPatient(patient);
+
+    var actual =
+        permissionEvaluator.hasPermission(this.dummyAuthentication, object, PermissionType.READ);
+
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void testShouldDenyPermissionByProcedureIdAndType() {
+    doAnswer(
+            invocationOnMock -> {
+              var patient = new Patient(onkostarApi);
+              patient.setId(1);
+              patient.setPersonPoolCode("Pool1");
+
+              var object = new Procedure(onkostarApi);
+              object.setFormName("OS.Form1");
+              object.setPatient(patient);
+
+              return object;
+            })
+        .when(onkostarApi)
+        .getProcedure(anyInt());
+
+    var actual =
+        permissionEvaluator.hasPermission(
+            this.dummyAuthentication,
+            123,
+            PersonPoolBasedPermissionEvaluator.PROCEDURE,
+            PermissionType.READ);
+
+    assertThat(actual).isFalse();
+  }
+}

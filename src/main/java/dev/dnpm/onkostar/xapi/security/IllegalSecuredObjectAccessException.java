@@ -17,15 +17,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dev.dnpm.onkostar.xapi.consent.idat;
+package dev.dnpm.onkostar.xapi.security;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
-import lombok.Data;
+public class IllegalSecuredObjectAccessException extends RuntimeException {
 
-@Data
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ConsentIdat {
-  private ConsentKey consentKey;
-  private List<PolicyState> currentPolicyStates;
+  public IllegalSecuredObjectAccessException() {
+    super();
+  }
+
+  public IllegalSecuredObjectAccessException(String message) {
+    super(message);
+  }
 }
