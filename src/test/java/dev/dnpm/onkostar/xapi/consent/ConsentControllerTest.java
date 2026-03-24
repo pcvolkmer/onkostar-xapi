@@ -12,8 +12,10 @@ import de.itc.onkostar.api.Procedure;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,23 +34,24 @@ class ConsentControllerTest {
     this.mockMvc = MockMvcBuilders.standaloneSetup(new ConsentController(this.onkostarApi)).build();
   }
 
-  @Test
-  void testShouldSaveNewResearchConsent() throws Exception {
+  @ParameterizedTest
+  @CsvSource({
+    "consent/genom-de_consent.json, /x-api/patient/12345678/consent/mv64e",
+    "consent/mii_consent.json, /x-api/patient/12345678/consent/research"
+  })
+  void testShouldSaveNewConsent(final String consentFile, final String consentUrl)
+      throws Exception {
     var patient = new Patient(this.onkostarApi);
     patient.setId(1);
     patient.setPatientId("12345678");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
 
     var consent =
-        Objects.requireNonNull(
-                this.getClass().getClassLoader().getResourceAsStream("consent/mii_consent.json"))
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
             .readAllBytes();
 
     this.mockMvc
-        .perform(
-            put("/x-api/patient/12345678/consent/research")
-                .contentType("application/json")
-                .content(consent))
+        .perform(put(consentUrl).contentType("application/json").content(consent))
         .andExpect(status().isAccepted());
 
     var captor = ArgumentCaptor.forClass(Procedure.class);
@@ -56,8 +59,13 @@ class ConsentControllerTest {
     assertThat(captor.getValue().getId()).isNull();
   }
 
-  @Test
-  void testShouldUpdateExistingResearchConsent() throws Exception {
+  @ParameterizedTest
+  @CsvSource({
+    "consent/genom-de_consent.json, /x-api/patient/12345678/consent/mv64e",
+    "consent/mii_consent.json, /x-api/patient/12345678/consent/research"
+  })
+  void testShouldUpdateExistingConsent(final String consentFile, final String consentUrl)
+      throws Exception {
     var patient = new Patient(this.onkostarApi);
     patient.setId(1);
     patient.setPatientId("12345678");
@@ -69,15 +77,11 @@ class ConsentControllerTest {
         .thenReturn(List.of(procedure));
 
     var consent =
-        Objects.requireNonNull(
-                this.getClass().getClassLoader().getResourceAsStream("consent/mii_consent.json"))
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
             .readAllBytes();
 
     this.mockMvc
-        .perform(
-            put("/x-api/patient/12345678/consent/research")
-                .contentType("application/json")
-                .content(consent))
+        .perform(put(consentUrl).contentType("application/json").content(consent))
         .andExpect(status().isAccepted());
 
     var captor = ArgumentCaptor.forClass(Procedure.class);
@@ -85,37 +89,36 @@ class ConsentControllerTest {
     assertThat(captor.getValue().getId()).isEqualTo(42);
   }
 
-  @Test
-  void testShouldSaveNewMvConsent() throws Exception {
-    var patient = new Patient(this.onkostarApi);
-    patient.setId(1);
-    patient.setPatientId("12345678");
-    when(onkostarApi.getPatient(anyString())).thenReturn(patient);
+  @ParameterizedTest
+  @CsvSource({
+    "consent/genom-de_consent.json, /x-api/patient/12345678/consent/mv64e",
+    "consent/mii_consent.json, /x-api/patient/12345678/consent/research"
+  })
+  void testShouldIgnoreUnknownPatient(final String consentFile, final String consentUrl)
+      throws Exception {
+    when(onkostarApi.getPatient(anyString())).thenReturn(null);
 
     var consent =
-        Objects.requireNonNull(
-                this.getClass()
-                    .getClassLoader()
-                    .getResourceAsStream("consent/genom-de_consent.json"))
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
             .readAllBytes();
 
     this.mockMvc
-        .perform(
-            put("/x-api/patient/12345678/consent/mv64e")
-                .contentType("application/json")
-                .content(consent))
-        .andExpect(status().isAccepted());
+        .perform(put(consentUrl).contentType("application/json").content(consent))
+        .andExpect(status().isNotFound());
 
-    var captor = ArgumentCaptor.forClass(Procedure.class);
-    verify(onkostarApi, times(1)).saveProcedure(captor.capture(), eq(false));
-    assertThat(captor.getValue().getId()).isNull();
+    verify(onkostarApi, times(0)).saveProcedure(any(), eq(false));
   }
 
-  @Test
-  void testShouldUpdateExistingMvConsent() throws Exception {
+  @ParameterizedTest
+  @CsvSource({
+    "consent/genom-de_consent.json, /x-api/patient/11112222/consent/mv64e",
+    "consent/mii_consent.json, /x-api/patient/11112222/consent/research"
+  })
+  void testShouldIgnoreConsentIfPatientDoesNotMatch(
+      final String consentFile, final String consentUrl) throws Exception {
     var patient = new Patient(this.onkostarApi);
     patient.setId(1);
-    patient.setPatientId("12345678");
+    patient.setPatientId("11112222");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
 
     var procedure = new Procedure(this.onkostarApi);
@@ -124,21 +127,32 @@ class ConsentControllerTest {
         .thenReturn(List.of(procedure));
 
     var consent =
-        Objects.requireNonNull(
-                this.getClass()
-                    .getClassLoader()
-                    .getResourceAsStream("consent/genom-de_consent.json"))
+        Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
             .readAllBytes();
 
     this.mockMvc
-        .perform(
-            put("/x-api/patient/12345678/consent/mv64e")
-                .contentType("application/json")
-                .content(consent))
-        .andExpect(status().isAccepted());
+        .perform(put(consentUrl).contentType("application/json").content(consent))
+        .andExpect(status().isUnprocessableEntity());
 
-    var captor = ArgumentCaptor.forClass(Procedure.class);
-    verify(onkostarApi, times(1)).saveProcedure(captor.capture(), eq(false));
-    assertThat(captor.getValue().getId()).isEqualTo(42);
+    verify(onkostarApi, times(0)).saveProcedure(any(), eq(false));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "/x-api/patient/12345678/consent/mv64e",
+        "/x-api/patient/12345678/consent/research"
+      })
+  void testShouldIgnoreNonConsentIdatPayload(final String consentUrl) throws Exception {
+    var patient = new Patient(this.onkostarApi);
+    patient.setId(1);
+    patient.setPatientId("12345678");
+    when(onkostarApi.getPatient(anyString())).thenReturn(patient);
+
+    this.mockMvc
+        .perform(put(consentUrl).contentType("application/json").content("{\"value\": \"test\"}"))
+        .andExpect(status().isUnprocessableEntity());
+
+    verify(onkostarApi, times(0)).saveProcedure(any(), eq(false));
   }
 }
