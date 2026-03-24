@@ -65,7 +65,7 @@ class ConsentControllerTest {
 
     var procedure = new Procedure(this.onkostarApi);
     procedure.setId(42);
-    when(onkostarApi.getProceduresForPatientByForm(anyInt(), anyString(), any()))
+    when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
         .thenReturn(List.of(procedure));
 
     var consent =
@@ -120,7 +120,7 @@ class ConsentControllerTest {
 
     var procedure = new Procedure(this.onkostarApi);
     procedure.setId(42);
-    when(onkostarApi.getProceduresForPatientByForm(anyInt(), anyString(), any()))
+    when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
         .thenReturn(List.of(procedure));
 
     var consent =
