@@ -1,0 +1,246 @@
+package dev.dnpm.onkostar.xapi.consent;
+
+import de.itc.onkostar.api.IOnkostarApi;
+import de.itc.onkostar.api.Item;
+import de.itc.onkostar.api.Procedure;
+import de.itc.onkostar.api.filter.DataOperator;
+import de.itc.onkostar.api.filter.IProcedureFilter;
+import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
+import de.itc.onkostar.api.filter.ProcedureDataFilter;
+import dev.dnpm.onkostar.xapi.consent.idat.ConsentIdat;
+import dev.pcvolkmer.mv64e.mtb.ConsentProvision;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class ConsentController {
+
+  private static final Logger log = LoggerFactory.getLogger(ConsentController.class);
+
+  private IOnkostarApi onkostarApi;
+
+  public ConsentController(final IOnkostarApi onkostarApi) {
+    this.onkostarApi = onkostarApi;
+  }
+
+  @PutMapping("/x-api/patient/{pid}/consent/research")
+  public ResponseEntity<?> putResearchConsent(
+      @PathVariable("pid") String patientId, @RequestBody ConsentIdat consent) {
+    final var patient = onkostarApi.getPatient(patientId);
+    if (null == patient) {
+      log.error("Patient not found: '{}'", patientId);
+      return ResponseEntity.notFound().build();
+    }
+
+    final var procedures =
+        onkostarApi.getProceduresForPatientByForm(
+            patient.getId(),
+            "DNPM ConsentMV",
+            new IProcedureFilter() {
+              @Override
+              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                return iProcedureFilterVisitor.visitProcedureDataFilter(
+                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
+              }
+            });
+
+    Procedure procedure;
+
+    if (procedures.isEmpty()) {
+      procedure = new Procedure(onkostarApi);
+      procedure.setFormName("DNPM ConsentMV");
+    } else {
+      procedure = procedures.get(0);
+    }
+
+    procedure.setPatientId(patient.getId());
+
+    // Patient ID
+
+    if (null == consent.getConsentKey()
+        || null == consent.getConsentKey().getSignerIds()
+        || consent.getConsentKey().getSignerIds().isEmpty()
+        || !patientId.equals(consent.getConsentKey().getSignerIds().get(0).getId())) {
+      log.error("Unprocessable Entity: Patient ID not found or not equal to consent signer ID");
+      return ResponseEntity.unprocessableEntity().build();
+    }
+
+    // Consent Date
+
+    if (null == consent.getConsentKey().getConsentDate()) {
+      log.error("Unprocessable Entity: MV Consent Date is null");
+      return ResponseEntity.unprocessableEntity().build();
+    }
+
+    procedure.setStartDate(consent.getConsentKey().getConsentDate());
+    procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
+
+    procedure.setValue("ebroadconsentpresent", new Item("ebroadconsentpresent", true));
+
+    try {
+      onkostarApi.saveProcedure(procedure, false);
+      log.info("Broad Consent saved successfully");
+      return ResponseEntity.accepted().build();
+    } catch (Exception e) {
+      log.error("Broad Consent not saved successfully", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  @PutMapping("/x-api/patient/{pid}/consent/mv64e")
+  public ResponseEntity<?> putMvConsent(
+      @PathVariable("pid") String patientId, @RequestBody ConsentIdat consent) {
+    final var patient = onkostarApi.getPatient(patientId);
+    if (null == patient) {
+      log.error("Patient not found: '{}'", patientId);
+      return ResponseEntity.notFound().build();
+    }
+
+    final var procedures =
+        onkostarApi.getProceduresForPatientByForm(
+            patient.getId(),
+            "DNPM ConsentMV",
+            new IProcedureFilter() {
+              @Override
+              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                return iProcedureFilterVisitor.visitProcedureDataFilter(
+                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
+              }
+            });
+
+    Procedure procedure;
+
+    if (procedures.isEmpty()) {
+      procedure = new Procedure(onkostarApi);
+      procedure.setFormName("DNPM ConsentMV");
+    } else {
+      procedure = procedures.get(0);
+    }
+
+    procedure.setPatientId(patient.getId());
+
+    // Patient ID
+
+    if (null == consent.getConsentKey()
+        || null == consent.getConsentKey().getSignerIds()
+        || consent.getConsentKey().getSignerIds().isEmpty()
+        || !patientId.equals(consent.getConsentKey().getSignerIds().get(0).getId())) {
+      log.error("Unprocessable Entity: Patient ID not found or not equal to consent signer ID");
+      return ResponseEntity.unprocessableEntity().build();
+    }
+
+    // Consent Date
+
+    if (null == consent.getConsentKey().getConsentDate()) {
+      log.error("Unprocessable Entity: MV Consent Date is null");
+      return ResponseEntity.unprocessableEntity().build();
+    }
+
+    procedure.setStartDate(consent.getConsentKey().getConsentDate());
+    procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
+
+    // Consent Provisions
+    if (null == consent.getCurrentPolicyStates()
+        || consent.getCurrentPolicyStates().isEmpty()
+        || null == consent.getConsentKey().getConsentTemplateKey()) {
+      log.error("Unprocessable Entity: MV Consent Provisions are null or empty");
+      return ResponseEntity.unprocessableEntity().build();
+    }
+    updateProvisions(procedure, consent);
+
+    // Verlauf Einwilligung MV
+    final var verlaufEinwilligungen = procedure.getSubProceduresMap().get("Verlauf");
+    if (null != verlaufEinwilligungen
+        && verlaufEinwilligungen.stream()
+            .noneMatch(v -> v.getStartDate().equals(consent.getConsentKey().getConsentDate()))) {
+      final var verlauf = new Procedure(onkostarApi);
+      verlauf.setFormName("DNPM UF ConsentMV Verlauf");
+      verlauf.setPatientId(patient.getId());
+      verlauf.setStartDate(consent.getConsentKey().getConsentDate());
+      verlauf.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
+      verlauf.setValue(
+          "version",
+          new Item("version", consent.getConsentKey().getConsentTemplateKey().getVersion()));
+      updateProvisions(verlauf, consent);
+      procedure.addSubProcedure("Verlauf", verlauf);
+    }
+
+    try {
+      onkostarApi.saveProcedure(procedure, false);
+      log.info("MV Consent saved successfully");
+      return ResponseEntity.accepted().build();
+    } catch (Exception e) {
+      log.error("MV Consent not saved successfully", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  private boolean updateProvisions(Procedure procedure, ConsentIdat consent) {
+    // Consent Provisions
+
+    if (null == consent.getCurrentPolicyStates() || consent.getCurrentPolicyStates().isEmpty()) {
+      return false;
+    }
+
+    final var policyStates = consent.getCurrentPolicyStates();
+
+    final var sequencing =
+        policyStates.stream()
+            .filter(
+                policyState ->
+                    "GenomDE_MV".equals(policyState.getKey().getDomainName())
+                        && "sequencing".equals(policyState.getKey().getName()))
+            .findFirst();
+    sequencing.ifPresent(
+        policyState ->
+            procedure.setValue(
+                "sequencing",
+                new Item(
+                    "sequencing",
+                    policyState.getValue()
+                        ? ConsentProvision.PERMIT.toValue()
+                        : ConsentProvision.DENY.toValue())));
+
+    final var caseIdentification =
+        policyStates.stream()
+            .filter(
+                policyState ->
+                    "GenomDE_MV".equals(policyState.getKey().getDomainName())
+                        && "case-identification".equals(policyState.getKey().getName()))
+            .findFirst();
+    caseIdentification.ifPresent(
+        policyState ->
+            procedure.setValue(
+                "caseidentification",
+                new Item(
+                    "caseidentification",
+                    policyState.getValue()
+                        ? ConsentProvision.PERMIT.toValue()
+                        : ConsentProvision.DENY.toValue())));
+
+    final var reidentification =
+        policyStates.stream()
+            .filter(
+                policyState ->
+                    "GenomDE_MV".equals(policyState.getKey().getDomainName())
+                        && "reidentification".equals(policyState.getKey().getName()))
+            .findFirst();
+    reidentification.ifPresent(
+        policyState ->
+            procedure.setValue(
+                "reidentification",
+                new Item(
+                    "reidentification",
+                    policyState.getValue()
+                        ? ConsentProvision.PERMIT.toValue()
+                        : ConsentProvision.DENY.toValue())));
+
+    return true;
+  }
+}
