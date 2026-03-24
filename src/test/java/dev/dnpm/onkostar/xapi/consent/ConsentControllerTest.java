@@ -29,6 +29,7 @@ import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Patient;
 import de.itc.onkostar.api.Procedure;
 import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
+import dev.dnpm.onkostar.xapi.security.PermissionType;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,7 +74,9 @@ class ConsentControllerTest {
     patient.setPatientId("12345678");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
 
-    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(true);
+    when(permissionEvaluator.hasPermission(
+            any(), any(Procedure.class), eq(PermissionType.READ_WRITE)))
+        .thenReturn(true);
 
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
@@ -105,7 +108,9 @@ class ConsentControllerTest {
     when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
         .thenReturn(List.of(procedure));
 
-    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(true);
+    when(permissionEvaluator.hasPermission(
+            any(), any(Procedure.class), eq(PermissionType.READ_WRITE)))
+        .thenReturn(true);
 
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
@@ -199,7 +204,9 @@ class ConsentControllerTest {
     patient.setPatientId("12345678");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
 
-    when(permissionEvaluator.hasPermission(any(), any(), any())).thenReturn(false);
+    when(permissionEvaluator.hasPermission(
+            any(), any(Procedure.class), eq(PermissionType.READ_WRITE)))
+        .thenReturn(false);
 
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))

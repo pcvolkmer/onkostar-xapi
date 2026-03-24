@@ -111,7 +111,7 @@ public class ConsentController {
 
     if (!permissionEvaluator.hasPermission(
         SecurityContextHolder.getContext().getAuthentication(),
-        procedure.getId(),
+        procedure,
         PermissionType.READ_WRITE)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
@@ -206,7 +206,7 @@ public class ConsentController {
 
     if (!permissionEvaluator.hasPermission(
         SecurityContextHolder.getContext().getAuthentication(),
-        procedure.getId(),
+        procedure,
         PermissionType.READ_WRITE)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
