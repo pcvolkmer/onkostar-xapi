@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * Permission-Evaluator zur Auswertung der Berechtigung auf Objekte aufgrund der
  * Personenstammberechtigung
  */
-@Component
+@Component("xapiPersonPoolBasedPermissionEvaluator")
 public class PersonPoolBasedPermissionEvaluator extends AbstractDelegatedPermissionEvaluator {
 
   public PersonPoolBasedPermissionEvaluator(

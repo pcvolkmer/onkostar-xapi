@@ -27,7 +27,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 /** Service mit Methoden zum Feststellen von sicherheitsrelevanten Informationen eines Benutzers */
-@Service
+@Service("xapiSecurityService")
 public class SecurityService {
 
   private final JdbcTemplate jdbcTemplate;

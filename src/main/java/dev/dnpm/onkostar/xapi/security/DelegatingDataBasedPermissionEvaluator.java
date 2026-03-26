@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * wird an die nachgelagerten PermissionEvaluatoren delegiert, welche jeweils einzeln dem Zugriff
  * zustimmen müssen.
  */
-@Component
+@Component("xapiDelegatingDataBasedPermissionEvaluator")
 public class DelegatingDataBasedPermissionEvaluator implements PermissionEvaluator {
 
   private final List<AbstractDelegatedPermissionEvaluator> permissionEvaluators;

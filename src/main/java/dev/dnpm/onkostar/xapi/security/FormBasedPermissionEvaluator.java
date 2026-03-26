@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  * Permission-Evaluator zur Auswertung der Berechtigung auf Objekte aufgrund der
  * Formularberechtigung
  */
-@Component
+@Component("xapiFormBasedPermissionEvaluator")
 public class FormBasedPermissionEvaluator extends AbstractDelegatedPermissionEvaluator {
 
   public FormBasedPermissionEvaluator(
