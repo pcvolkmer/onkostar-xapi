@@ -56,36 +56,13 @@ public class ConsentController {
   }
 
   @PutMapping("/x-api/patient/{pid}/consent/research")
-  public ResponseEntity<?> putResearchConsent(
+  public ResponseEntity<Void> putResearchConsent(
       @PathVariable("pid") String patientId, @RequestBody ConsentIdat consent) {
     final var patient = onkostarApi.getPatient(patientId);
     if (null == patient) {
       log.error("Patient not found: '{}'", patientId);
       return ResponseEntity.notFound().build();
     }
-
-    final var procedures =
-        onkostarApi.getProceduresForPatientByForm(
-            patient.getId(),
-            "DNPM ConsentMV",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
-              }
-            });
-
-    Procedure procedure;
-
-    if (procedures.isEmpty()) {
-      procedure = new Procedure(onkostarApi);
-      procedure.setFormName("DNPM ConsentMV");
-    } else {
-      procedure = procedures.get(0);
-    }
-
-    procedure.setPatientId(patient.getId());
 
     // Patient ID
 
@@ -103,6 +80,8 @@ public class ConsentController {
       log.error("Unprocessable Entity: MV Consent Date is null");
       return ResponseEntity.unprocessableEntity().build();
     }
+
+    Procedure procedure = findFirstOrCreatenewConsentProcedure(patient.getId());
 
     procedure.setStartDate(consent.getConsentKey().getConsentDate());
     procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
@@ -135,29 +114,6 @@ public class ConsentController {
       return ResponseEntity.notFound().build();
     }
 
-    final var procedures =
-        onkostarApi.getProceduresForPatientByForm(
-            patient.getId(),
-            "DNPM ConsentMV",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
-              }
-            });
-
-    Procedure procedure;
-
-    if (procedures.isEmpty()) {
-      procedure = new Procedure(onkostarApi);
-      procedure.setFormName("DNPM ConsentMV");
-    } else {
-      procedure = procedures.get(0);
-    }
-
-    procedure.setPatientId(patient.getId());
-
     // Patient ID
 
     if (null == consent.getConsentKey()
@@ -174,6 +130,8 @@ public class ConsentController {
       log.error("Unprocessable Entity: MV Consent Date is null");
       return ResponseEntity.unprocessableEntity().build();
     }
+
+    Procedure procedure = findFirstOrCreatenewConsentProcedure(patient.getId());
 
     procedure.setStartDate(consent.getConsentKey().getConsentDate());
     procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
@@ -219,6 +177,33 @@ public class ConsentController {
       log.error("MV Consent not saved successfully", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+  }
+
+  private Procedure findFirstOrCreatenewConsentProcedure(int patientId) {
+    final var procedures =
+        onkostarApi.getProceduresForPatientByForm(
+            patientId,
+            "DNPM ConsentMV",
+            new IProcedureFilter() {
+              @Override
+              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                return iProcedureFilterVisitor.visitProcedureDataFilter(
+                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
+              }
+            });
+
+    Procedure procedure;
+
+    if (procedures.isEmpty()) {
+      procedure = new Procedure(onkostarApi);
+      procedure.setFormName("DNPM ConsentMV");
+    } else {
+      procedure = procedures.get(0);
+    }
+
+    procedure.setPatientId(patientId);
+
+    return procedure;
   }
 
   private boolean updateProvisions(Procedure procedure, ConsentIdat consent) {

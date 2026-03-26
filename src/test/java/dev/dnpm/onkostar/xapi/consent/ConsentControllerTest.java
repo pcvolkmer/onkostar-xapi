@@ -157,11 +157,6 @@ class ConsentControllerTest {
     patient.setPatientId("11112222");
     when(onkostarApi.getPatient(anyString())).thenReturn(patient);
 
-    var procedure = new Procedure(this.onkostarApi);
-    procedure.setId(42);
-    when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
-        .thenReturn(List.of(procedure));
-
     var consent =
         Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(consentFile))
             .readAllBytes();
