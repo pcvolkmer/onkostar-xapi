@@ -22,10 +22,6 @@ package dev.dnpm.onkostar.xapi.consent;
 import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Item;
 import de.itc.onkostar.api.Procedure;
-import de.itc.onkostar.api.filter.DataOperator;
-import de.itc.onkostar.api.filter.IProcedureFilter;
-import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
-import de.itc.onkostar.api.filter.ProcedureDataFilter;
 import dev.dnpm.onkostar.xapi.consent.idat.ConsentIdat;
 import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
 import dev.dnpm.onkostar.xapi.security.PermissionType;
@@ -81,11 +77,11 @@ public class ConsentController {
       return ResponseEntity.unprocessableEntity().build();
     }
 
-    Procedure procedure = findFirstOrCreatenewConsentProcedure(patient.getId());
+    Procedure procedure = findFirstOrCreateNewConsentProcedure(patient.getId());
 
     procedure.setStartDate(consent.getConsentKey().getConsentDate());
-    procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
-
+    procedure.setValue(
+        "ebroadconsentdate", new Item("date", consent.getConsentKey().getConsentDate()));
     procedure.setValue("ebroadconsentpresent", new Item("ebroadconsentpresent", true));
 
     if (!permissionEvaluator.hasPermission(
@@ -110,7 +106,7 @@ public class ConsentController {
   }
 
   @PutMapping("/x-api/patient/{pid}/consent/mv64e")
-  public ResponseEntity<?> putMvConsent(
+  public ResponseEntity<Void> putMvConsent(
       @PathVariable("pid") String patientId, @RequestBody ConsentIdat consent) {
     final var patient = onkostarApi.getPatient(patientId);
     if (null == patient) {
@@ -135,7 +131,7 @@ public class ConsentController {
       return ResponseEntity.unprocessableEntity().build();
     }
 
-    Procedure procedure = findFirstOrCreatenewConsentProcedure(patient.getId());
+    Procedure procedure = findFirstOrCreateNewConsentProcedure(patient.getId());
 
     procedure.setStartDate(consent.getConsentKey().getConsentDate());
     procedure.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
@@ -187,18 +183,9 @@ public class ConsentController {
     }
   }
 
-  private Procedure findFirstOrCreatenewConsentProcedure(int patientId) {
+  private Procedure findFirstOrCreateNewConsentProcedure(int patientId) {
     final var procedures =
-        onkostarApi.getProceduresForPatientByForm(
-            patientId,
-            "DNPM ConsentMV",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("date", null, DataOperator.ISNOTNULL));
-              }
-            });
+        onkostarApi.getProceduresForPatientByForm(patientId, "DNPM ConsentMV", null);
 
     Procedure procedure;
 
