@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.1...v0.1.2) (2026-03-30)
+
+
+### Features
+
+* add broad consent date ([#4](https://github.com/pcvolkmer/onkostar-xapi/issues/4)) ([2b462a2](https://github.com/pcvolkmer/onkostar-xapi/commit/2b462a20c25f095ae4bf01ac11fbabc82fdfc840))
+* always add new verlauf subform ([#6](https://github.com/pcvolkmer/onkostar-xapi/issues/6)) ([190b700](https://github.com/pcvolkmer/onkostar-xapi/commit/190b7006ae980a1b3023759c781ea70608e8a269))
+
 ## [0.1.1](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.0...v0.1.1) (2026-03-30)
 
 
