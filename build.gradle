@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'dev.dnpm'
-version = '0.1.0-SNAPSHOT'
+version = '0.1.0-SNAPSHOT' // x-release-please-version
 description = 'Erweiterte REST API für Onkostar'
 
 java {
@@ -16,14 +16,9 @@ java {
 
 repositories {
     mavenCentral()
-    // Ignore the next two maven repositories if you want to use a local build
-    maven {
-        url = uri("https://git.dnpm.dev/api/packages/public-snapshots/maven")
-    }
     maven {
         url = uri("https://git.dnpm.dev/api/packages/public/maven")
     }
-    // Local repository for local dependency build
     mavenLocal()
 }
 
@@ -65,7 +60,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-    //dependsOn(tasks.spotlessCheck)
+    dependsOn(tasks.spotlessCheck)
 }
 
 spotless {
