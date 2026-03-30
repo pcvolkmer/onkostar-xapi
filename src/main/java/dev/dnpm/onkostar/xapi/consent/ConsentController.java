@@ -96,8 +96,12 @@ public class ConsentController {
     }
 
     try {
+      final var newProcedure = null == procedure.getId();
       onkostarApi.saveProcedure(procedure, false);
       log.info("Broad Consent saved successfully");
+      if (newProcedure) {
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+      }
       return ResponseEntity.accepted().build();
     } catch (Exception e) {
       log.error("Broad Consent not saved successfully", e);
@@ -170,8 +174,12 @@ public class ConsentController {
     }
 
     try {
+      final var newProcedure = null == procedure.getId();
       onkostarApi.saveProcedure(procedure, false);
       log.info("MV Consent saved successfully");
+      if (newProcedure) {
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+      }
       return ResponseEntity.accepted().build();
     } catch (Exception e) {
       log.error("MV Consent not saved successfully", e);

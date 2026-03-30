@@ -84,7 +84,7 @@ class ConsentControllerTest {
 
     this.mockMvc
         .perform(put(consentUrl).contentType("application/json").content(consent))
-        .andExpect(status().isAccepted());
+        .andExpect(status().isCreated());
 
     var captor = ArgumentCaptor.forClass(Procedure.class);
     verify(onkostarApi, times(1)).saveProcedure(captor.capture(), eq(false));
