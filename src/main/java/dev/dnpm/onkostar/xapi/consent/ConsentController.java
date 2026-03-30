@@ -146,21 +146,16 @@ public class ConsentController {
     updateProvisions(procedure, consent);
 
     // Verlauf Einwilligung MV
-    final var verlaufEinwilligungen = procedure.getSubProceduresMap().get("Verlauf");
-    if (null != verlaufEinwilligungen
-        && verlaufEinwilligungen.stream()
-            .noneMatch(v -> v.getStartDate().equals(consent.getConsentKey().getConsentDate()))) {
-      final var verlauf = new Procedure(onkostarApi);
-      verlauf.setFormName("DNPM UF ConsentMV Verlauf");
-      verlauf.setPatientId(patient.getId());
-      verlauf.setStartDate(consent.getConsentKey().getConsentDate());
-      verlauf.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
-      verlauf.setValue(
-          "version",
-          new Item("version", consent.getConsentKey().getConsentTemplateKey().getVersion()));
-      updateProvisions(verlauf, consent);
-      procedure.addSubProcedure("Verlauf", verlauf);
-    }
+    final var verlauf = new Procedure(onkostarApi);
+    verlauf.setFormName("DNPM UF ConsentMV Verlauf");
+    verlauf.setPatientId(patient.getId());
+    verlauf.setStartDate(consent.getConsentKey().getConsentDate());
+    verlauf.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
+    verlauf.setValue(
+        "version",
+        new Item("version", consent.getConsentKey().getConsentTemplateKey().getVersion()));
+    updateProvisions(verlauf, consent);
+    procedure.addSubProcedure("Verlauf", verlauf);
 
     if (!permissionEvaluator.hasPermission(
         SecurityContextHolder.getContext().getAuthentication(),
