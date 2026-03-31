@@ -84,7 +84,7 @@ public class ConsentController {
 
     procedure.setStartDate(consent.getConsentKey().getConsentDate());
     procedure.setValue(
-        "ebroadconsentdate", new Item("date", consent.getConsentKey().getConsentDate()));
+        "ebroadconsentdate", new Item("ebroadconsentdate", consent.getConsentKey().getConsentDate()));
     procedure.setValue("ebroadconsentpresent", new Item("ebroadconsentpresent", true));
 
     if (!permissionEvaluator.hasPermission(
