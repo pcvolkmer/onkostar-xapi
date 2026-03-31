@@ -26,6 +26,9 @@ import dev.dnpm.onkostar.xapi.consent.idat.ConsentIdat;
 import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
 import dev.dnpm.onkostar.xapi.security.PermissionType;
 import dev.pcvolkmer.mv64e.mtb.ConsentProvision;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -144,6 +147,35 @@ public class ConsentController {
       return ResponseEntity.unprocessableEntity().build();
     }
     updateProvisions(procedure, consent);
+
+    final var existingVerlauf = procedure.getSubProceduresMap().get("Verlauf");
+
+    // Remove old Verlauf entries from same day to avoid duplicates
+    if (null != existingVerlauf) {
+      final var entriesToRemove =
+          existingVerlauf.stream()
+              .filter(Objects::nonNull)
+              .filter(
+                  p -> {
+                    final var existingDate = p.getValue("date");
+                    // Ignore if date is null - keep entry
+                    if (null == existingDate) {
+                      return false;
+                    }
+
+                    var consentDate =
+                        LocalDate.fromDateFields(consent.getConsentKey().getConsentDate())
+                            .toDateTimeAtStartOfDay();
+                    var existingConsentDate =
+                        LocalDate.fromDateFields(existingDate.getDate()).toDateTimeAtStartOfDay();
+                    // If date (by day) is equal
+                    return consentDate.equals(existingConsentDate);
+                  })
+              .collect(Collectors.toList());
+      for (var entry : entriesToRemove) {
+        procedure.removeSubProcedure("Verlauf", entry);
+      }
+    }
 
     // Verlauf Einwilligung MV
     final var verlauf = new Procedure(onkostarApi);
