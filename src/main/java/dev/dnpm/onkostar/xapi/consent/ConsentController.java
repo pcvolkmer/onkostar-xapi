@@ -91,6 +91,7 @@ public class ConsentController {
         SecurityContextHolder.getContext().getAuthentication(),
         procedure,
         PermissionType.READ_WRITE)) {
+      log.warn("No permission to write Broad Consent for: '{}'", patientId);
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
@@ -193,6 +194,7 @@ public class ConsentController {
         SecurityContextHolder.getContext().getAuthentication(),
         procedure,
         PermissionType.READ_WRITE)) {
+      log.warn("No permission to write MV Consent for: '{}'", patientId);
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
