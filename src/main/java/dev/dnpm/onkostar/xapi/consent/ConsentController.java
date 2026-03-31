@@ -170,6 +170,12 @@ public class ConsentController {
                             .toDateTimeAtStartOfDay();
                     var existingConsentDate =
                         LocalDate.fromDateFields(existingDate.getDate()).toDateTimeAtStartOfDay();
+
+                    // delete newer information than incoming consent
+                    // consent should be in-order from Kafka
+                    if (consentDate.isBefore(existingConsentDate)) {
+                      return true;
+                    }
                     // If date (by day) is equal
                     return consentDate.equals(existingConsentDate);
                   })

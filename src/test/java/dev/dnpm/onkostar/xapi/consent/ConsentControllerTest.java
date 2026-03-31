@@ -277,7 +277,7 @@ class ConsentControllerTest {
     verlaufSubprocedure.setId(4711);
     verlaufSubprocedure.setPatient(patient);
     verlaufSubprocedure.setValue(
-        "date", new Item("date", Date.from(Instant.parse("2026-03-30T12:00:00Z"))));
+        "date", new Item("date", Date.from(Instant.parse("2026-03-16T12:00:00Z"))));
 
     var procedure = new Procedure(this.onkostarApi);
     procedure.setId(42);
@@ -311,5 +311,52 @@ class ConsentControllerTest {
     assertThat(subProcedures).hasSize(2);
     assertThat(subProcedures.get(0).getId()).isEqualTo(4711);
     assertThat(subProcedures.get(1).getId()).isNull();
+  }
+
+  @Test
+  void testShouldRemoveNewerExistingMvConsentVerlaufEntry() throws Exception {
+    var patient = new Patient(this.onkostarApi);
+    patient.setId(1);
+    patient.setPatientId("12345678");
+    when(onkostarApi.getPatient(anyString())).thenReturn(patient);
+
+    var verlaufSubprocedure = new Procedure(this.onkostarApi);
+    verlaufSubprocedure.setFormName("Verlauf");
+    verlaufSubprocedure.setId(4711);
+    verlaufSubprocedure.setPatient(patient);
+    verlaufSubprocedure.setValue(
+        "date", new Item("date", Date.from(Instant.parse("2026-03-31T12:00:00Z"))));
+
+    var procedure = new Procedure(this.onkostarApi);
+    procedure.setId(42);
+    procedure.addSubProcedure("Verlauf", verlaufSubprocedure);
+    when(onkostarApi.getProceduresForPatientByForm(eq(1), eq("DNPM ConsentMV"), any()))
+        .thenReturn(List.of(procedure));
+
+    when(permissionEvaluator.hasPermission(
+            any(), any(Procedure.class), eq(PermissionType.READ_WRITE)))
+        .thenReturn(true);
+
+    var consent =
+        Objects.requireNonNull(
+                this.getClass()
+                    .getClassLoader()
+                    .getResourceAsStream("consent/genom-de_consent.json"))
+            .readAllBytes();
+
+    this.mockMvc
+        .perform(
+            put("/x-api/patient/12345678/consent/mv64e")
+                .contentType("application/json")
+                .content(consent))
+        .andExpect(status().isAccepted());
+
+    var captor = ArgumentCaptor.forClass(Procedure.class);
+    verify(onkostarApi, times(1)).saveProcedure(captor.capture(), eq(false));
+    var subProcedures = captor.getValue().getSubProceduresMap().get("Verlauf");
+
+    // Two entries - the existing one and the new one
+    assertThat(subProcedures).hasSize(1);
+    assertThat(subProcedures.get(0).getId()).isNull();
   }
 }
