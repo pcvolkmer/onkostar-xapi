@@ -191,9 +191,12 @@ public class ConsentController {
     verlauf.setPatientId(patient.getId());
     verlauf.setStartDate(consent.getConsentKey().getConsentDate());
     verlauf.setValue("date", new Item("date", consent.getConsentKey().getConsentDate()));
-    verlauf.setValue(
-        "version",
-        new Item("version", consent.getConsentKey().getConsentTemplateKey().getVersion()));
+    var version = consent.getConsentKey().getConsentTemplateKey().getVersion();
+    if (null == version || version.isBlank()) {
+      log.warn("Consent Template Version is null or empty");
+      version = "-";
+    }
+    verlauf.setValue("version", new Item("version", version));
     updateProvisions(verlauf, consent);
     procedure.addSubProcedure("Verlauf", verlauf);
 
