@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.2...v0.1.3) (2026-04-01)
+
+
+### Features
+
+* remove too new verlauf entries ([#9](https://github.com/pcvolkmer/onkostar-xapi/issues/9)) ([a70d54b](https://github.com/pcvolkmer/onkostar-xapi/commit/a70d54b0589e03d2e6e1c4bd5fb95d4dd2fc43eb))
+
 ## [0.1.2](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.1...v0.1.2) (2026-03-31)
 
 
