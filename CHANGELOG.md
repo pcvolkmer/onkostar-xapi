@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.3...v0.1.4) (2026-04-01)
+
+
+### Features
+
+* use placeholder for version if not available ([#12](https://github.com/pcvolkmer/onkostar-xapi/issues/12)) ([14892f1](https://github.com/pcvolkmer/onkostar-xapi/commit/14892f1d4c8c70f6b61a72aaf480049c18cf31cd))
+
 ## [0.1.3](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.2...v0.1.3) (2026-04-01)
 
 
