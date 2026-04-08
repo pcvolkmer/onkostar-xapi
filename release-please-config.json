@@ -11,6 +11,10 @@
         {
           "type": "generic",
           "path": "build.gradle"
+        },
+        {
+          "type": "generic",
+          "path": "src/main/java/dev/dnpm/onkostar/xapi/MainController.java"
         }
       ]
     }
