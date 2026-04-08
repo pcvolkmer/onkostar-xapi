@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.4...v0.1.5) (2026-04-08)
+
+
+### Features
+
+* initial dashboard data ([#14](https://github.com/pcvolkmer/onkostar-xapi/issues/14)) ([7b854db](https://github.com/pcvolkmer/onkostar-xapi/commit/7b854db8e7e07f8febd3f50afdcd77fdd72a06a8))
+
 ## [0.1.4](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.3...v0.1.4) (2026-04-01)
 
 
