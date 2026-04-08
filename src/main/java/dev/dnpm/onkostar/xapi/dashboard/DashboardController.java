@@ -41,7 +41,6 @@ public class DashboardController {
   @GetMapping("/x-api/mv-dashboard")
   public List<DashboardEntry> getDashboard() {
     var kpa = dashboardService.findKlinikAnamneseWithCaseId();
-    log.info("Found {} procedures", kpa.size());
     return kpa.stream()
         .map(
             procedure -> {
