@@ -50,7 +50,7 @@ public class DashboardService {
 
   public List<Procedure> findKlinikAnamneseWithCaseId() {
     final var sql =
-        "SELECT prozedur.id FROM dk_dnpm_kpa JOIN prozedur ON (prozedur.id = dk_dnpm_kpa.id) WHERE geloescht = 0 AND fallnummermv IS NOT NULL AND anmeldedatummtb IS NOT NULL;";
+        "SELECT prozedur.id FROM dk_dnpm_kpa JOIN prozedur ON (prozedur.id = dk_dnpm_kpa.id) WHERE geloescht = 0 AND fallnummermv IS NOT NULL AND fallnummermv <> '' AND anmeldedatummtb IS NOT NULL;";
     final var ids = jdbcTemplate.queryForList(sql, Integer.class);
 
     return ids.stream()
