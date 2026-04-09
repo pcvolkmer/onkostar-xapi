@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.5...v0.1.6) (2026-04-09)
+
+
+### Features
+
+* exclude empty fallnummermv values ([#16](https://github.com/pcvolkmer/onkostar-xapi/issues/16)) ([ed07e4a](https://github.com/pcvolkmer/onkostar-xapi/commit/ed07e4a05bdf41cd1dda6b4959c7128af5cc4f7d))
+
 ## [0.1.5](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.4...v0.1.5) (2026-04-08)
 
 
