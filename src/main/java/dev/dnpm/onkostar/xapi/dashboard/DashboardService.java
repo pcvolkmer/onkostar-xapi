@@ -73,7 +73,7 @@ public class DashboardService {
 
         var builder = DashboardEntry.MvConsent.builder();
         if (null != date && null != date.getDate()) {
-          builder.consentDate(date.getDate());
+          builder.consentDate(date.getString());
         } else {
           return null;
         }
@@ -105,7 +105,7 @@ public class DashboardService {
 
         var builder = DashboardEntry.BroadConsent.builder();
         if (null != date && null != date.getDate()) {
-          builder.consentDate(date.getDate());
+          builder.consentDate(date.getString());
         } else {
           return null;
         }
@@ -146,7 +146,7 @@ public class DashboardService {
         .map(
             procedure ->
                 DashboardEntry.CarePlan.builder()
-                    .date(procedure.getValue("datum").getDate())
+                    .date(procedure.getValue("datum").getString())
                     .build())
         .sorted((o1, o2) -> o2.getDate().compareTo(o1.getDate()))
         .collect(Collectors.toList());
@@ -181,7 +181,7 @@ public class DashboardService {
 
       return DashboardEntry.Submission.builder()
           .id(procedure.getValue("ID" + formFieldSuffix).getString())
-          .date(procedure.getValue("Datum" + formFieldSuffix).getDate())
+          .date(procedure.getValue("Datum" + formFieldSuffix).getString())
           .tan(procedure.getValue("Vorgangsnummer" + formFieldSuffix).getString())
           .build();
     } catch (Exception e) {
