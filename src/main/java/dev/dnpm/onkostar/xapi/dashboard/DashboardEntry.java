@@ -31,6 +31,7 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class DashboardEntry {
   private final String caseId;
+  private final String guid;
   private final Mtb mtb;
   private final MvConsent mvConsent;
   private final BroadConsent broadConsent;

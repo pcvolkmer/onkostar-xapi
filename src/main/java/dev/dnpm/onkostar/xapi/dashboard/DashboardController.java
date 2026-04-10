@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Base64Utils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -59,6 +60,7 @@ public class DashboardController {
               final var builder =
                   DashboardEntry.builder()
                       .caseId(caseId.getString())
+                      .guid(Base64Utils.encodeToString(procedure.getGuid()))
                       .mtb(
                           DashboardEntry.Mtb.builder()
                               .registrationDate(date.getDate())
