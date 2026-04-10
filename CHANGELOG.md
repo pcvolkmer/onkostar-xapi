@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.7](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.6...v0.1.7) (2026-04-10)
+
+
+### Features
+
+* add KPA guid to dashboard entry ([#18](https://github.com/pcvolkmer/onkostar-xapi/issues/18)) ([ed1f956](https://github.com/pcvolkmer/onkostar-xapi/commit/ed1f95633a52b6f81f8593612762f1ac2668f336))
+
+
+### Bug Fixes
+
+* use string instead of date ([#20](https://github.com/pcvolkmer/onkostar-xapi/issues/20)) ([a490e71](https://github.com/pcvolkmer/onkostar-xapi/commit/a490e711933197d8566c9be6ba27c48f80c76051))
+
 ## [0.1.6](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.5...v0.1.6) (2026-04-09)
 
 
