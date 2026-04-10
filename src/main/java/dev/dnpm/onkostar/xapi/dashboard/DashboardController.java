@@ -63,7 +63,7 @@ public class DashboardController {
                       .guid(Base64Utils.encodeToString(procedure.getGuid()))
                       .mtb(
                           DashboardEntry.Mtb.builder()
-                              .registrationDate(date.getDate())
+                              .registrationDate(date.getString())
                               .carePlans(
                                   dashboardService.getCarePlans(patient.getId(), procedure.getId()))
                               .build())

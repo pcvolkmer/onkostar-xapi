@@ -19,9 +19,7 @@
 
 package dev.dnpm.onkostar.xapi.dashboard;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.util.Date;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
@@ -42,9 +40,7 @@ public class DashboardEntry {
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class Mtb {
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private final Date registrationDate;
-
+    private final String registrationDate;
     private final List<CarePlan> carePlans;
   }
 
@@ -52,9 +48,7 @@ public class DashboardEntry {
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class MvConsent {
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private final Date consentDate;
-
+    private final String consentDate;
     private final boolean sequencing;
     private final boolean caseIdentification;
     private final boolean reIdentification;
@@ -64,9 +58,7 @@ public class DashboardEntry {
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class BroadConsent {
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private final Date consentDate;
-
+    private final String consentDate;
     private final boolean electronicAvailable;
   }
 
@@ -74,8 +66,7 @@ public class DashboardEntry {
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class CarePlan {
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private final Date date;
+    private final String date;
   }
 
   @Data
@@ -83,10 +74,7 @@ public class DashboardEntry {
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class Submission {
     private final String id;
-
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private final Date date;
-
+    private final String date;
     private final String tan;
   }
 }
