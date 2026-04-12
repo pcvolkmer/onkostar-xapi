@@ -19,11 +19,13 @@
 
 package dev.dnpm.onkostar.xapi.dashboard;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.token.Sha512DigestUtils;
 import org.springframework.util.Base64Utils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,45 +43,69 @@ public class DashboardController {
 
   @GetMapping("/x-api/mv-dashboard")
   public List<DashboardEntry> getDashboard() {
-    var kpa = dashboardService.findKlinikAnamneseWithCaseId();
-    return kpa.stream()
-        .map(
-            procedure -> {
-              final var caseId = procedure.getValue("FallnummerMV");
-              if (null == caseId) {
-                return null;
-              }
-              final var date = procedure.getValue("AnmeldedatumMTB");
-              if (null == date) {
-                return null;
-              }
+    var usedPids = new ArrayList<Integer>();
 
-              final var patient = procedure.getPatient();
-              final var diseases = procedure.getDiseases();
+    final var kpa =
+        dashboardService.findKlinikAnamneseWithCaseId().stream()
+            .map(
+                procedure -> {
+                  final var caseId = procedure.getValue("FallnummerMV");
+                  if (null == caseId) {
+                    return null;
+                  }
+                  final var date = procedure.getValue("AnmeldedatumMTB");
+                  if (null == date) {
+                    return null;
+                  }
 
-              final var builder =
-                  DashboardEntry.builder()
-                      .caseId(caseId.getString())
-                      .guid(Base64Utils.encodeToString(procedure.getGuid()))
-                      .mtb(
-                          DashboardEntry.Mtb.builder()
-                              .registrationDate(date.getString())
-                              .carePlans(
-                                  dashboardService.getCarePlans(patient.getId(), procedure.getId()))
-                              .build())
-                      .mvConsent(dashboardService.getMvConsent(patient.getId()))
-                      .broadConsent(dashboardService.getBroadConsent(patient.getId()));
+                  final var patient = procedure.getPatient();
+                  final var diseases = procedure.getDiseases();
 
-              if (null != diseases && diseases.size() == 1) {
-                final var disease = diseases.get(0);
-                builder
-                    .clinicalSubmission(dashboardService.getClinicalSubmission(disease))
-                    .genomicSubmission(dashboardService.getGenomicSubmission(disease));
-              }
+                  usedPids.add(patient.getId());
 
-              return builder.build();
-            })
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList());
+                  final var builder =
+                      DashboardEntry.builder()
+                          .caseId(caseId.getString())
+                          .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                          .mtb(
+                              DashboardEntry.Mtb.builder()
+                                  .registrationDate(date.getString())
+                                  .carePlans(
+                                      dashboardService.getCarePlans(
+                                          patient.getId(), procedure.getId()))
+                                  .build())
+                          .mvConsent(dashboardService.getMvConsent(patient.getId()))
+                          .broadConsent(dashboardService.getBroadConsent(patient.getId()));
+
+                  if (null != diseases && diseases.size() == 1) {
+                    final var disease = diseases.get(0);
+                    builder
+                        .clinicalSubmission(dashboardService.getClinicalSubmission(disease))
+                        .genomicSubmission(dashboardService.getGenomicSubmission(disease));
+                  }
+
+                  return builder.build();
+                })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    kpa.addAll(
+        dashboardService.findMvConsent().stream()
+            .filter(procedure -> !usedPids.contains(procedure.getPatient().getId()))
+            .map(
+                procedure ->
+                    DashboardEntry.builder()
+                        .caseId(
+                            String.format(
+                                "!%s",
+                                Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
+                        .mvConsent(dashboardService.getMvConsent(procedure.getPatient().getId()))
+                        .broadConsent(
+                            dashboardService.getBroadConsent(procedure.getPatient().getId()))
+                        .build())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList()));
+
+    return kpa;
   }
 }
