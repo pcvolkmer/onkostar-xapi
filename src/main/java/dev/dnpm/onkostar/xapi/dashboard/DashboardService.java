@@ -21,11 +21,14 @@ package dev.dnpm.onkostar.xapi.dashboard;
 
 import de.itc.onkostar.api.Disease;
 import de.itc.onkostar.api.IOnkostarApi;
+import de.itc.onkostar.api.Patient;
 import de.itc.onkostar.api.Procedure;
 import de.itc.onkostar.api.filter.DataOperator;
 import de.itc.onkostar.api.filter.IProcedureFilter;
 import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -39,6 +42,8 @@ import org.springframework.stereotype.Service;
 public class DashboardService {
 
   private final Logger log = LoggerFactory.getLogger(DashboardService.class);
+
+  private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
   private final IOnkostarApi onkostarApi;
   private final JdbcTemplate jdbcTemplate;
@@ -159,7 +164,7 @@ public class DashboardService {
                 DashboardEntry.CarePlan.builder()
                     .date(procedure.getValue("datum").getString())
                     .build())
-        .sorted((o1, o2) -> o2.getDate().compareTo(o1.getDate()))
+        .sorted(Comparator.comparing(DashboardEntry.CarePlan::getDate))
         .collect(Collectors.toList());
   }
 
@@ -199,5 +204,16 @@ public class DashboardService {
       log.error("Error processing Submission for patient {}", disease.getPatient().getId(), e);
       return null;
     }
+  }
+
+  public boolean patientDeceasedAtFirstMtb(
+      Patient patient, List<DashboardEntry.CarePlan> carePlan) {
+    if (null == patient
+        || null == patient.getDeathdate()
+        || null == carePlan
+        || carePlan.isEmpty()) {
+      return false;
+    }
+    return dateFormat.format(patient.getDeathdate()).compareTo(carePlan.get(0).getDate()) <= 0;
   }
 }
