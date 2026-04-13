@@ -59,6 +59,17 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
+  public List<Procedure> findMvConsent() {
+    final var sql =
+        "SELECT prozedur.id FROM dk_dnpm_consentmv JOIN prozedur ON (prozedur.id = dk_dnpm_consentmv.id) WHERE geloescht = 0 AND date IS NOT NULL AND date <> '';";
+    final var ids = jdbcTemplate.queryForList(sql, Integer.class);
+
+    return ids.stream()
+        .map(onkostarApi::getProcedure)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+  }
+
   public DashboardEntry.MvConsent getMvConsent(int patientId) {
     try {
       final var procedures =
