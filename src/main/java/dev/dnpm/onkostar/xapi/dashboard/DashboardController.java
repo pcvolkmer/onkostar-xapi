@@ -103,6 +103,7 @@ public class DashboardController {
                             String.format(
                                 "!%s",
                                 Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
+                        .guid(Base64Utils.encodeToString(procedure.getGuid()))
                         .deceased(procedure.getPatient().getDeathdate() != null)
                         .mvConsent(dashboardService.getMvConsent(procedure.getPatient().getId()))
                         .broadConsent(
