@@ -96,6 +96,10 @@ public class DashboardController {
     kpa.addAll(
         dashboardService.findMvConsent().stream()
             .filter(procedure -> !usedPids.contains(procedure.getPatient().getId()))
+            .filter(
+                procedure ->
+                    null != procedure.getPatient().getDiseases()
+                        && !procedure.getPatient().getDiseases().isEmpty())
             .map(
                 procedure ->
                     DashboardEntry.builder()
