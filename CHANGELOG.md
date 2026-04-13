@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.7...v0.1.8) (2026-04-13)
+
+
+### Features
+
+* add cases with MV consent but no MTB ([#21](https://github.com/pcvolkmer/onkostar-xapi/issues/21)) ([2280a54](https://github.com/pcvolkmer/onkostar-xapi/commit/2280a54bb5821879854d8cddb1bddd8c3963afb9))
+
 ## [0.1.7](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.6...v0.1.7) (2026-04-10)
 
 
