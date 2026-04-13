@@ -63,16 +63,20 @@ public class DashboardController {
 
                   usedPids.add(patient.getId());
 
+                  final var carePlans =
+                      dashboardService.getCarePlans(patient.getId(), procedure.getId());
+
                   final var builder =
                       DashboardEntry.builder()
                           .caseId(caseId.getString())
                           .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                          .deceased(null != procedure.getPatient().getDeathdate())
+                          .deceasedAtFirstMtb(
+                              dashboardService.patientDeceasedAtFirstMtb(patient, carePlans))
                           .mtb(
                               DashboardEntry.Mtb.builder()
                                   .registrationDate(date.getString())
-                                  .carePlans(
-                                      dashboardService.getCarePlans(
-                                          patient.getId(), procedure.getId()))
+                                  .carePlans(carePlans)
                                   .build())
                           .mvConsent(dashboardService.getMvConsent(patient.getId()))
                           .broadConsent(dashboardService.getBroadConsent(patient.getId()));
@@ -99,6 +103,7 @@ public class DashboardController {
                             String.format(
                                 "!%s",
                                 Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
+                        .deceased(procedure.getPatient().getDeathdate() != null)
                         .mvConsent(dashboardService.getMvConsent(procedure.getPatient().getId()))
                         .broadConsent(
                             dashboardService.getBroadConsent(procedure.getPatient().getId()))

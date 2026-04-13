@@ -30,6 +30,8 @@ import lombok.Data;
 public class DashboardEntry {
   private final String caseId;
   private final String guid;
+  private final boolean deceased;
+  private final boolean deceasedAtFirstMtb;
   private final Mtb mtb;
   private final MvConsent mvConsent;
   private final BroadConsent broadConsent;
