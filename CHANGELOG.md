@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.8...v0.1.9) (2026-04-13)
+
+
+### Features
+
+* add deceased information ([#23](https://github.com/pcvolkmer/onkostar-xapi/issues/23)) ([f8c8e8e](https://github.com/pcvolkmer/onkostar-xapi/commit/f8c8e8ed4614ae26d3733c60cd410cde33d93ae3))
+* add guid if no h nummer ([#25](https://github.com/pcvolkmer/onkostar-xapi/issues/25)) ([5391728](https://github.com/pcvolkmer/onkostar-xapi/commit/5391728e46e83a94b3a7c8780739761a8f510223))
+
 ## [0.1.8](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.7...v0.1.8) (2026-04-13)
 
 
