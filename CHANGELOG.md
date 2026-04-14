@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.10](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.9...v0.1.10) (2026-04-14)
+
+
+### Features
+
+* add sequencing type extraction ([#30](https://github.com/pcvolkmer/onkostar-xapi/issues/30)) ([d4c2217](https://github.com/pcvolkmer/onkostar-xapi/commit/d4c2217a5277d5a8b5d099b6051e5ee1634247ad))
+
+
+### Bug Fixes
+
+* ignore (test) patients without diseases ([#26](https://github.com/pcvolkmer/onkostar-xapi/issues/26)) ([ef8b843](https://github.com/pcvolkmer/onkostar-xapi/commit/ef8b843b3821a4970f7bb1de917c00cb52643a7c))
+
 ## [0.1.9](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.8...v0.1.9) (2026-04-13)
 
 
