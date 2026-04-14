@@ -78,5 +78,6 @@ public class DashboardEntry {
     private final String id;
     private final String date;
     private final String tan;
+    private final String sequencingType;
   }
 }

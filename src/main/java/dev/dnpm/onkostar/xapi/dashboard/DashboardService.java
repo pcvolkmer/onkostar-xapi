@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -199,6 +200,9 @@ public class DashboardService {
           .id(procedure.getValue("ID" + formFieldSuffix).getString())
           .date(procedure.getValue("Datum" + formFieldSuffix).getString())
           .tan(procedure.getValue("Vorgangsnummer" + formFieldSuffix).getString())
+          .sequencingType(
+              extractSequencingType(
+                  procedure.getValue("Meldebestaetigung" + formFieldSuffix).getString()))
           .build();
     } catch (Exception e) {
       log.error("Error processing Submission for patient {}", disease.getPatient().getId(), e);
@@ -215,5 +219,33 @@ public class DashboardService {
       return false;
     }
     return dateFormat.format(patient.getDeathdate()).compareTo(carePlan.get(0).getDate()) <= 0;
+  }
+
+  private String extractSequencingType(String meldebestaetigung) {
+    if (null == meldebestaetigung || meldebestaetigung.isBlank()) {
+      return null;
+    }
+
+    var regexp =
+        Pattern.compile(
+            "IBE\\+[A-Z0-9]{10}\\+[A-Z0-9]{10}&\\d{11}&\\d{9}&[A-Z0-9]{9}&\\d&[ORH]&\\d&\\d&[CG]&(?<type>\\d)&\\d\\+\\d\\+[a-fA-F0-9]{64}");
+
+    var matcher = regexp.matcher(meldebestaetigung);
+    if (!matcher.matches()) {
+      return null;
+    }
+    switch (matcher.group("type")) {
+      case "0":
+        return "Keine";
+      case "1":
+        return "WGS";
+      case "2":
+        return "WES";
+      case "3":
+        return "Panel";
+      case "WGS/LR":
+      default:
+        return null;
+    }
   }
 }
