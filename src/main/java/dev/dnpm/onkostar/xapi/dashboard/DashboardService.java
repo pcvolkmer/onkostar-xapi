@@ -27,6 +27,7 @@ import de.itc.onkostar.api.filter.DataOperator;
 import de.itc.onkostar.api.filter.IProcedureFilter;
 import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.List;
@@ -34,6 +35,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -196,6 +199,10 @@ public class DashboardService {
         return null;
       }
 
+      if (!isValid(procedure.getValue("Meldebestaetigung" + formFieldSuffix).getString())) {
+        return null;
+      }
+
       return DashboardEntry.Submission.builder()
           .id(procedure.getValue("ID" + formFieldSuffix).getString())
           .date(procedure.getValue("Datum" + formFieldSuffix).getString())
@@ -221,19 +228,47 @@ public class DashboardService {
     return dateFormat.format(patient.getDeathdate()).compareTo(carePlan.get(0).getDate()) <= 0;
   }
 
-  private String extractSequencingType(String meldebestaetigung) {
+  boolean isValid(String meldebestaetigung) {
+    if (null == meldebestaetigung || meldebestaetigung.isBlank()) {
+      return false;
+    }
+
+    var regexp =
+        Pattern.compile(
+            "IBE\\+[A-Z0-9]{10}\\+(?<hashedpart>[A-Z0-9]{10}&\\d{11}&\\d{9}&[A-Z0-9]{9}&\\d&[ORH]&\\d&\\d&[CG]&[0-4]&\\d)\\+\\d\\+(?<hash>[a-fA-F0-9]{64})");
+
+    var matcher = regexp.matcher(meldebestaetigung);
+    if (!matcher.matches()) {
+      return false;
+    }
+
+    final var expectedHash = matcher.group("hash").toLowerCase();
+    final var hashedPart = matcher.group("hashedpart").getBytes(StandardCharsets.UTF_8);
+
+    final var digest = DigestUtils.getSha256Digest();
+    digest.update(hashedPart);
+    final var hash = new String(Hex.encodeHex(digest.digest()));
+    return expectedHash.equals(hash);
+  }
+
+  String extractSequencingType(String meldebestaetigung) {
     if (null == meldebestaetigung || meldebestaetigung.isBlank()) {
       return null;
     }
 
     var regexp =
         Pattern.compile(
-            "IBE\\+[A-Z0-9]{10}\\+[A-Z0-9]{10}&\\d{11}&\\d{9}&[A-Z0-9]{9}&\\d&[ORH]&\\d&\\d&[CG]&(?<type>\\d)&\\d\\+\\d\\+[a-fA-F0-9]{64}");
+            "IBE\\+[A-Z0-9]{10}\\+(?<hashedpart>[A-Z0-9]{10}&\\d{11}&\\d{9}&[A-Z0-9]{9}&\\d&[ORH]&\\d&\\d&[CG]&(?<type>[0-4])&\\d)\\+\\d\\+(?<hash>[a-fA-F0-9]{64})");
 
     var matcher = regexp.matcher(meldebestaetigung);
     if (!matcher.matches()) {
       return null;
     }
+
+    if (!isValid(meldebestaetigung)) {
+      return null;
+    }
+
     switch (matcher.group("type")) {
       case "0":
         return "Keine";
@@ -243,7 +278,8 @@ public class DashboardService {
         return "WES";
       case "3":
         return "Panel";
-      case "WGS/LR":
+      case "4":
+        return "WGS/LR";
       default:
         return null;
     }
