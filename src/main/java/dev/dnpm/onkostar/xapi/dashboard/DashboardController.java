@@ -88,23 +88,30 @@ public class DashboardController {
                   }
 
                   if (null != procedure.getPatient().getDeathdate()) {
-                    final var carePlanDates =
-                        carePlans.stream()
-                            .map(DashboardEntry.CarePlan::getDate)
-                            .collect(Collectors.toList());
-                    final var followUpDates =
-                        dashboardService.getFollowUpDates(patient.getId(), procedure.getId());
+                    try {
+                      final var carePlanDates =
+                          carePlans.stream()
+                              .map(DashboardEntry.CarePlan::getDate)
+                              .collect(Collectors.toList());
+                      final var followUpDates =
+                          dashboardService.getFollowUpDates(patient.getId(), procedure.getId());
 
-                    if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
-                      followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
-                      final var nextFollowUpDate =
-                          carePlanDates.stream()
-                              .map(LocalDate::parse)
-                              .map(localDate -> localDate.plusMonths(3))
-                              .max(Comparator.naturalOrder())
-                              .orElse(null);
-                      builder.nextFollowUpDue(
-                          nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
+                      if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
+                        followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
+                        final var nextFollowUpDate =
+                            carePlanDates.stream()
+                                .map(LocalDate::parse)
+                                .map(localDate -> localDate.plusMonths(3))
+                                .max(Comparator.naturalOrder())
+                                .orElse(null);
+                        builder.nextFollowUpDue(
+                            nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
+                      }
+                    } catch (Exception e) {
+                      log.warn(
+                          "Error calculating next follow-up for patient '{}': {}",
+                          patient.getId(),
+                          e.getMessage());
                     }
                   }
 
