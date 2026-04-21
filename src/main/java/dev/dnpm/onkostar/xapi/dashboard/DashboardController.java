@@ -19,9 +19,8 @@
 
 package dev.dnpm.onkostar.xapi.dashboard;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +85,27 @@ public class DashboardController {
                     builder
                         .clinicalSubmission(dashboardService.getClinicalSubmission(disease))
                         .genomicSubmission(dashboardService.getGenomicSubmission(disease));
+                  }
+
+                  if (null != procedure.getPatient().getDeathdate()) {
+                    final var carePlanDates =
+                        carePlans.stream()
+                            .map(DashboardEntry.CarePlan::getDate)
+                            .collect(Collectors.toList());
+                    final var followUpDates =
+                        dashboardService.getFollowUpDates(patient.getId(), procedure.getId());
+
+                    if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
+                      followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
+                      final var nextFollowUpDate =
+                          carePlanDates.stream()
+                              .map(LocalDate::parse)
+                              .map(localDate -> localDate.plusMonths(3))
+                              .max(Comparator.naturalOrder())
+                              .orElse(null);
+                      builder.nextFollowUpDue(
+                          nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
+                    }
                   }
 
                   return builder.build();

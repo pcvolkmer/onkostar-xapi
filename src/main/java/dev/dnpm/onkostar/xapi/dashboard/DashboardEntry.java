@@ -38,6 +38,8 @@ public class DashboardEntry {
   private final Submission clinicalSubmission;
   private final Submission genomicSubmission;
 
+  private final String nextFollowUpDue;
+
   @Data
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)

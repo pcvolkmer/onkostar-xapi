@@ -29,9 +29,7 @@ import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
@@ -169,6 +167,45 @@ public class DashboardService {
                     .date(procedure.getValue("datum").getString())
                     .build())
         .sorted(Comparator.comparing(DashboardEntry.CarePlan::getDate))
+        .collect(Collectors.toList());
+  }
+
+  public List<Map.Entry<String, Boolean>> getFollowUpDates(int patientId, int kpaId) {
+    var einzelempfehlungIds =
+        onkostarApi
+            .getProceduresForPatientByForm(
+                patientId,
+                "DNPM Therapieplan",
+                new IProcedureFilter() {
+                  @Override
+                  public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                    return iProcedureFilterVisitor.visitProcedureDataFilter(
+                        new ProcedureDataFilter(
+                            "refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
+                  }
+                })
+            .stream()
+            .filter(Objects::nonNull)
+            .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .map(Procedure::getId)
+            .collect(Collectors.toList());
+
+    return onkostarApi.getProceduresForPatientByForm(patientId, "DNPM FollowUp", null).stream()
+        .filter(Objects::nonNull)
+        .filter(
+            procedure ->
+                null != procedure.getValue("DatumFollowUp")
+                    && null != procedure.getValue("LinkTherapieempfehlung")
+                    && einzelempfehlungIds.contains(
+                        procedure.getValue("LinkTherapieempfehlung").getInt()))
+        .sorted(Comparator.comparing(procedure -> procedure.getValue("DatumFollowUp").getDate()))
+        .map(
+            procedure ->
+                new AbstractMap.SimpleEntry<String, Boolean>(
+                    procedure.getValue("DatumFollowUp").getString(),
+                    procedure.getValue("LostToFollowUp").getBoolean()) {})
         .collect(Collectors.toList());
   }
 
