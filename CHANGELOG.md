@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.11](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.10...v0.1.11) (2026-04-21)
+
+
+### Features
+
+* add next follow-up date if available ([#33](https://github.com/pcvolkmer/onkostar-xapi/issues/33)) ([a2cca65](https://github.com/pcvolkmer/onkostar-xapi/commit/a2cca655d4ee21d8ff625272e598e492cac6c08a))
+* catch errors in next follow-up calculation ([#34](https://github.com/pcvolkmer/onkostar-xapi/issues/34)) ([1388056](https://github.com/pcvolkmer/onkostar-xapi/commit/1388056281a6bafa7d52b0b8134188d3483a7ed9))
+* check submission report hash ([#31](https://github.com/pcvolkmer/onkostar-xapi/issues/31)) ([5f7358a](https://github.com/pcvolkmer/onkostar-xapi/commit/5f7358a8d7bab33490d4f6c99ab650597d401f82))
+
+
+### Bug Fixes
+
+* the next follow-up is only available if the patient is alive ([36a7357](https://github.com/pcvolkmer/onkostar-xapi/commit/36a73574d04aa2860f50329c899dcc24bc8b001a))
+
 ## [0.1.10](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.9...v0.1.10) (2026-04-14)
 
 
