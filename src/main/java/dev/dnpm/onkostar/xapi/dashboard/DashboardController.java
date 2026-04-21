@@ -87,7 +87,7 @@ public class DashboardController {
                         .genomicSubmission(dashboardService.getGenomicSubmission(disease));
                   }
 
-                  if (null != procedure.getPatient().getDeathdate()) {
+                  if (null == procedure.getPatient().getDeathdate()) {
                     try {
                       final var carePlanDates =
                           carePlans.stream()
