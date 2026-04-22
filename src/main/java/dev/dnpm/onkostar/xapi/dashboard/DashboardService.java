@@ -143,6 +143,28 @@ public class DashboardService {
     return null;
   }
 
+  public boolean hasTherapyRecommendations(int patientId, int kpaId) {
+    return onkostarApi
+        .getProceduresForPatientByForm(
+            patientId,
+            "DNPM Therapieplan",
+            new IProcedureFilter() {
+              @Override
+              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                return iProcedureFilterVisitor.visitProcedureDataFilter(
+                    new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
+              }
+            })
+        .stream()
+        .filter(Objects::nonNull)
+        .anyMatch(
+            procedure -> {
+              final var mitEinzelempfehlung = procedure.getValue("miteinzelempfehlung");
+              log.info("mitEinzelempfehlung: {}", mitEinzelempfehlung);
+              return mitEinzelempfehlung != null && mitEinzelempfehlung.getBoolean();
+            });
+  }
+
   public List<DashboardEntry.CarePlan> getCarePlans(int patientId, int kpaId) {
     return onkostarApi
         .getProceduresForPatientByForm(
