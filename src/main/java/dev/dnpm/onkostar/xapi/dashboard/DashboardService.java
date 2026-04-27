@@ -192,6 +192,35 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
+  public List<DashboardEntry.Finding> getFindings(int patientId, int kpaId) {
+    return onkostarApi
+        .getProceduresForPatientByForm(
+            patientId,
+            "DNPM Therapieplan",
+            new IProcedureFilter() {
+              @Override
+              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+                return iProcedureFilterVisitor.visitProcedureDataFilter(
+                    new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
+              }
+            })
+        .stream()
+        .filter(Objects::nonNull)
+        .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
+        .filter(Objects::nonNull)
+        .flatMap(Collection::stream)
+        .filter(procedure -> procedure.getValue("refosmolekulargenetik") != null)
+        .map(procedure -> procedure.getValue("refosmolekulargenetik").getInt())
+        .map(onkostarApi::getProcedure)
+        .filter(Objects::nonNull)
+        .map(
+            procedure ->
+                DashboardEntry.Finding.builder()
+                    .date(procedure.getValue("Datum").getDate().toString())
+                    .build())
+        .collect(Collectors.toList());
+  }
+
   public List<Map.Entry<String, Boolean>> getFollowUpDates(int patientId, int kpaId) {
     var einzelempfehlungIds =
         onkostarApi
