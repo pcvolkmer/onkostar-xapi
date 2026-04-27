@@ -76,6 +76,9 @@ public class DashboardController {
                               DashboardEntry.Mtb.builder()
                                   .registrationDate(date.getString())
                                   .carePlans(carePlans)
+                                  .findings(
+                                      dashboardService.getFindings(
+                                          patient.getId(), procedure.getId()))
                                   .build())
                           .mvConsent(dashboardService.getMvConsent(patient.getId()))
                           .broadConsent(dashboardService.getBroadConsent(patient.getId()));

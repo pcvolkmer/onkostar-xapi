@@ -46,6 +46,7 @@ public class DashboardEntry {
   public static class Mtb {
     private final String registrationDate;
     private final List<CarePlan> carePlans;
+    private final List<Finding> findings;
   }
 
   @Data
@@ -70,6 +71,13 @@ public class DashboardEntry {
   @Builder
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class CarePlan {
+    private final String date;
+  }
+
+  @Data
+  @Builder
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public static class Finding {
     private final String date;
   }
 
