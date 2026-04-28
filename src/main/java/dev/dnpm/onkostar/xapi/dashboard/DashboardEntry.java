@@ -79,6 +79,7 @@ public class DashboardEntry {
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class Finding {
     private final String date;
+    private final boolean hasIssues;
   }
 
   @Data

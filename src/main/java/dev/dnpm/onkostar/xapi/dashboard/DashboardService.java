@@ -213,12 +213,44 @@ public class DashboardService {
         .map(procedure -> procedure.getValue("refosmolekulargenetik").getInt())
         .map(onkostarApi::getProcedure)
         .filter(Objects::nonNull)
-        .map(
-            procedure ->
-                DashboardEntry.Finding.builder()
-                    .date(procedure.getValue("Datum").getDate().toString())
-                    .build())
+        .map(this::mapFinding)
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
+  }
+
+  Optional<DashboardEntry.Finding> mapFinding(Procedure procedure) {
+    if (null == procedure || null == procedure.getValue("Datum")) {
+      return Optional.empty();
+    }
+
+    final var builder =
+        DashboardEntry.Finding.builder().date(procedure.getValue("Datum").getDate().toString());
+
+    if (formFieldIsEmpty(procedure, "ReferenzGenom", String.class)
+        || formFieldIsEmpty(procedure, "ArtDerSequenzierung", String.class)) {
+      builder.hasIssues(true);
+    }
+
+    final var finding = builder.build();
+
+    return Optional.of(finding);
+  }
+
+  private boolean formFieldIsEmpty(
+      final Procedure procedure, final String fieldName, final Class<?> clazz) {
+    if (null == procedure || null == procedure.getValue(fieldName)) {
+      return true;
+    }
+
+    final var value = procedure.getValue(fieldName);
+    if (String.class == clazz) {
+      return null == value.getString() || value.getString().isBlank();
+    } else if (Date.class == clazz) {
+      return null == value.getDate();
+    } else {
+      return true;
+    }
   }
 
   public List<Map.Entry<String, Boolean>> getFollowUpDates(int patientId, int kpaId) {

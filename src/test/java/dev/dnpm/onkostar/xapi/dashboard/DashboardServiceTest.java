@@ -28,15 +28,15 @@ import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Item;
 import de.itc.onkostar.api.Procedure;
 import de.itc.onkostar.api.filter.IProcedureFilter;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.*;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -201,5 +201,22 @@ class DashboardServiceTest {
     final var actual = dashboardService.getGenomicSubmission(disease);
 
     assertThat(actual).isNull();
+  }
+
+  @ParameterizedTest
+  @CsvSource({"HG19,S,false", "HG19,,true", ",S,true"})
+  void shouldMapProcedureToFinding(
+      String referenzGenom, String artDerSequenzierung, boolean valid) {
+    final var procedure = new Procedure(this.onkostarApi);
+    procedure.setId(1);
+    procedure.setValue("Datum", new Item("", Date.valueOf(LocalDate.parse("2026-04-15"))));
+    procedure.setValue("ReferenzGenom", new Item("", referenzGenom));
+    procedure.setValue("ArtDerSequenzierung", new Item("", artDerSequenzierung));
+
+    final var actual = dashboardService.mapFinding(procedure);
+
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getDate()).isEqualTo("2026-04-15");
+    assertThat(actual.get().isHasIssues()).isEqualTo(valid);
   }
 }
