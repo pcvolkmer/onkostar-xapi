@@ -214,10 +214,17 @@ public class DashboardService {
         .map(onkostarApi::getProcedure)
         .filter(Objects::nonNull)
         .map(
-            procedure ->
-                DashboardEntry.Finding.builder()
-                    .date(procedure.getValue("Datum").getDate().toString())
-                    .build())
+            procedure -> {
+                var builder = DashboardEntry.Finding.builder()
+                        .date(procedure.getValue("Datum").getDate().toString());
+
+                if (procedure.getValue("ReferenzGenom") == null || procedure.getValue("ArtDerSequenzierung") == null) {
+                    builder.hasIssues(true);
+                }
+
+                return builder.build();
+            }
+        )
         .collect(Collectors.toList());
   }
 
