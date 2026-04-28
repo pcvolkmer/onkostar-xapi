@@ -215,16 +215,17 @@ public class DashboardService {
         .filter(Objects::nonNull)
         .map(
             procedure -> {
-                var builder = DashboardEntry.Finding.builder()
-                        .date(procedure.getValue("Datum").getDate().toString());
+              var builder =
+                  DashboardEntry.Finding.builder()
+                      .date(procedure.getValue("Datum").getDate().toString());
 
-                if (procedure.getValue("ReferenzGenom") == null || procedure.getValue("ArtDerSequenzierung") == null) {
-                    builder.hasIssues(true);
-                }
+              if (procedure.getValue("ReferenzGenom") == null
+                  || procedure.getValue("ArtDerSequenzierung") == null) {
+                builder.hasIssues(true);
+              }
 
-                return builder.build();
-            }
-        )
+              return builder.build();
+            })
         .collect(Collectors.toList());
   }
 
