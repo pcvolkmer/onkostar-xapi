@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.12](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.11...v0.1.12) (2026-04-28)
+
+
+### Features
+
+* add date from findings documents ([#39](https://github.com/pcvolkmer/onkostar-xapi/issues/39)) ([b71e185](https://github.com/pcvolkmer/onkostar-xapi/commit/b71e1856a48b6a3085ef8bce074af27aca75e793))
+* check MolGen form for issues ([#41](https://github.com/pcvolkmer/onkostar-xapi/issues/41)) ([e7e45e4](https://github.com/pcvolkmer/onkostar-xapi/commit/e7e45e4b1a6a0f9b8a94eca396b7e71a14f95104))
+* follow-ups if a recommendation is present ([#37](https://github.com/pcvolkmer/onkostar-xapi/issues/37)) ([182f27b](https://github.com/pcvolkmer/onkostar-xapi/commit/182f27bcd4cff92a986f371088b76172a0d2f387))
+
 ## [0.1.11](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.10...v0.1.11) (2026-04-21)
 
 
