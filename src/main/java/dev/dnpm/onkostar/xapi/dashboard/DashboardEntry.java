@@ -72,6 +72,7 @@ public class DashboardEntry {
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public static class CarePlan {
     private final String date;
+    private final String type;
   }
 
   @Data
