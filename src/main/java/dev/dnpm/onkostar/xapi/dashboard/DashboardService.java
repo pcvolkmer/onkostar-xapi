@@ -32,6 +32,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -200,8 +201,8 @@ public class DashboardService {
   }
 
   public List<DashboardEntry.Finding> getFindings(int patientId, int kpaId) {
-    return onkostarApi
-        .getProceduresForPatientByForm(
+    final var carePlans =
+        onkostarApi.getProceduresForPatientByForm(
             patientId,
             "DNPM Therapieplan",
             new IProcedureFilter() {
@@ -210,19 +211,33 @@ public class DashboardService {
                 return iProcedureFilterVisitor.visitProcedureDataFilter(
                     new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
               }
-            })
-        .stream()
-        .filter(Objects::nonNull)
-        .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
-        .filter(Objects::nonNull)
-        .flatMap(Collection::stream)
-        .filter(procedure -> procedure.getValue("refosmolekulargenetik") != null)
-        .map(procedure -> procedure.getValue("refosmolekulargenetik").getInt())
-        .map(onkostarApi::getProcedure)
-        .filter(Objects::nonNull)
-        .map(this::mapFinding)
+            });
+
+    final var noRecommandationFindings =
+        carePlans.stream()
+            .filter(Objects::nonNull)
+            .filter(procedure -> procedure.getValue("refnoempfmolgen") != null)
+            .map(procedure -> procedure.getValue("refnoempfmolgen").getInt())
+            .map(onkostarApi::getProcedure)
+            .filter(Objects::nonNull)
+            .map(this::mapFinding);
+
+    final var recommendationFindings =
+        carePlans.stream()
+            .filter(Objects::nonNull)
+            .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .filter(procedure -> procedure.getValue("refosmolekulargenetik") != null)
+            .map(procedure -> procedure.getValue("refosmolekulargenetik").getInt())
+            .map(onkostarApi::getProcedure)
+            .filter(Objects::nonNull)
+            .map(this::mapFinding);
+
+    return Stream.concat(noRecommandationFindings, recommendationFindings)
         .filter(Optional::isPresent)
         .map(Optional::get)
+        .distinct()
         .collect(Collectors.toList());
   }
 
