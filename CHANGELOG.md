@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.13](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.12...v0.1.13) (2026-05-12)
+
+
+### Features
+
+* add direct care-plan findings ([#42](https://github.com/pcvolkmer/onkostar-xapi/issues/42)) ([97fa79a](https://github.com/pcvolkmer/onkostar-xapi/commit/97fa79af5931e083d124b5c0eddc07b38999c952))
+* add mtb type ([#43](https://github.com/pcvolkmer/onkostar-xapi/issues/43)) ([6788ea9](https://github.com/pcvolkmer/onkostar-xapi/commit/6788ea952fb59acb31115ee27dbbf500dc1fe2c8))
+
 ## [0.1.12](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.11...v0.1.12) (2026-04-28)
 
 
