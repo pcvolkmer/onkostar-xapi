@@ -184,10 +184,17 @@ public class DashboardService {
                 procedure.getValue("datum") != null
                     && procedure.getValue("datum").getDate() != null)
         .map(
-            procedure ->
-                DashboardEntry.CarePlan.builder()
-                    .date(procedure.getValue("datum").getString())
-                    .build())
+            procedure -> {
+              final var builder =
+                  DashboardEntry.CarePlan.builder().date(procedure.getValue("datum").getString());
+
+              final var mtbType = procedure.getValue("mtbtyp");
+              if (mtbType != null) {
+                builder.type(procedure.getValue("mtbtyp").getString());
+              }
+
+              return builder.build();
+            })
         .sorted(Comparator.comparing(DashboardEntry.CarePlan::getDate))
         .collect(Collectors.toList());
   }
