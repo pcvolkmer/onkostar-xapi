@@ -23,10 +23,14 @@ import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Item;
 import de.itc.onkostar.api.Patient;
 import de.itc.onkostar.api.Procedure;
+import dev.dnpm.onkostar.xapi.molgen.model.BiomarkerElement;
+import dev.dnpm.onkostar.xapi.molgen.model.Molekulargenuntersuchung;
+import dev.dnpm.onkostar.xapi.molgen.model.OsMolekulargenetik;
 import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
 import dev.dnpm.onkostar.xapi.security.PermissionType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,11 +146,13 @@ public class MolGenController {
     // Varianten
     var variantResponse = this.updateVariants(procedure, content, patient);
     response.addedVariants = variantResponse.addedVariants;
+    response.updatedVariants = variantResponse.updatedVariants;
     response.removedVariants = variantResponse.removedVariants;
 
     // Komplexe Biomarker
     var biomarkerResponse = this.updateBiomarkers(procedure, content, patient);
     response.addedBiomarkers = biomarkerResponse.addedBiomarkers;
+    response.updatedBiomarkers = biomarkerResponse.updatedBiomarkers;
     response.removedBiomarkers = biomarkerResponse.removedBiomarkers;
 
     try {
@@ -167,16 +173,18 @@ public class MolGenController {
           procedure.getSubProceduresMap().get("MolekulargenetischeUntersuchung");
 
       final var existingProcedureKeys =
-          existingProcedures.stream().map(this::getSubProcedureKey).collect(Collectors.toList());
+          existingProcedures.stream()
+              .map(MolGenUtils::getSubProcedureKey)
+              .collect(Collectors.toList());
 
       final var newEntryKeys =
           mapVariants(content, patient).stream()
-              .map(this::getSubProcedureKey)
+              .map(MolGenUtils::getSubProcedureKey)
               .collect(Collectors.toList());
 
       final var proceduresToRemove =
           existingProcedures.stream()
-              .filter(p -> !newEntryKeys.contains(this.getSubProcedureKey(p)))
+              .filter(p -> !newEntryKeys.contains(MolGenUtils.getSubProcedureKey(p)))
               .collect(Collectors.toList());
       for (var p : proceduresToRemove) {
         // TODO: Remove procedure if sources are correct
@@ -184,9 +192,28 @@ public class MolGenController {
       }
       response.removedVariants = 0; // proceduresToRemove.size();
 
+      final var proceduresToUpdate =
+          mapVariants(content, patient).stream()
+              .filter(p -> existingProcedureKeys.contains(MolGenUtils.getSubProcedureKey(p)))
+              .collect(Collectors.toList());
+
+      for (var p : proceduresToUpdate) {
+        for (var existingProcedure : existingProcedures) {
+          if (!MolGenUtils.getSubProcedureKey(p)
+              .equals(MolGenUtils.getSubProcedureKey(existingProcedure))) {
+            continue;
+          }
+          if (!MolGenUtils.getSubProcedureHash(p)
+              .equals(MolGenUtils.getSubProcedureHash(existingProcedure))) {
+            MolGenUtils.patchProcedure(existingProcedure, p);
+            response.updatedVariants++;
+          }
+        }
+      }
+
       final var proceduresToAdd =
           mapVariants(content, patient).stream()
-              .filter(p -> !existingProcedureKeys.contains(this.getSubProcedureKey(p)))
+              .filter(p -> !existingProcedureKeys.contains(MolGenUtils.getSubProcedureKey(p)))
               .collect(Collectors.toList());
       for (var p : proceduresToAdd) {
         procedure.addSubProcedure("MolekulargenetischeUntersuchung", p);
@@ -210,16 +237,18 @@ public class MolGenController {
       final var existingProcedures = procedure.getSubProceduresMap().get("KomplexeBiomarker");
 
       final var existingProcedureKeys =
-          existingProcedures.stream().map(this::getSubProcedureKey).collect(Collectors.toList());
+          existingProcedures.stream()
+              .map(MolGenUtils::getSubProcedureKey)
+              .collect(Collectors.toList());
 
       final var newEntryKeys =
           mapBiomarkers(content, patient).stream()
-              .map(this::getSubProcedureKey)
+              .map(MolGenUtils::getSubProcedureKey)
               .collect(Collectors.toList());
 
       final var proceduresToRemove =
           existingProcedures.stream()
-              .filter(p -> !newEntryKeys.contains(this.getSubProcedureKey(p)))
+              .filter(p -> !newEntryKeys.contains(MolGenUtils.getSubProcedureKey(p)))
               .collect(Collectors.toList());
       for (var p : proceduresToRemove) {
         // TODO: Remove procedure if sources are correct
@@ -227,9 +256,33 @@ public class MolGenController {
       }
       response.removedBiomarkers = 0; // proceduresToRemove.size();
 
+      final var proceduresToUpdate =
+          mapBiomarkers(content, patient).stream()
+              .filter(p -> existingProcedureKeys.contains(MolGenUtils.getSubProcedureKey(p)))
+              .collect(Collectors.toList());
+
+      for (var p : proceduresToUpdate) {
+        for (var existingProcedure : existingProcedures) {
+          if (!MolGenUtils.getSubProcedureKey(p)
+              .equals(MolGenUtils.getSubProcedureKey(existingProcedure))) {
+            continue;
+          }
+
+          log.info(
+              "Comparing procedures:\n\t{}\n\t{}",
+              MolGenUtils.getSubProcedureHash(p),
+              MolGenUtils.getSubProcedureHash(existingProcedure));
+          if (!MolGenUtils.getSubProcedureHash(p)
+              .equals(MolGenUtils.getSubProcedureHash(existingProcedure))) {
+            MolGenUtils.patchProcedure(existingProcedure, p);
+            response.updatedBiomarkers++;
+          }
+        }
+      }
+
       final var proceduresToAdd =
           mapBiomarkers(content, patient).stream()
-              .filter(p -> !existingProcedureKeys.contains(this.getSubProcedureKey(p)))
+              .filter(p -> !existingProcedureKeys.contains(MolGenUtils.getSubProcedureKey(p)))
               .collect(Collectors.toList());
       for (var p : proceduresToAdd) {
         procedure.addSubProcedure("KomplexeBiomarker", p);
@@ -257,99 +310,69 @@ public class MolGenController {
     return result;
   }
 
-  private String getSubProcedureKey(Procedure procedure) {
-    var key = new StringBuilder();
-    var ergebnis = procedure.getValue("Ergebnis");
-    if (null != ergebnis) {
-      key.append(ergebnis.getString());
-    }
-    var evhgncid = procedure.getValue("EVHGNCID");
-    if (null != evhgncid) {
-      key.append(evhgncid.getString());
-    }
-    var cnvhgncid = procedure.getValue("CNVHGNCID");
-    if (null != cnvhgncid) {
-      key.append(cnvhgncid.getString());
-    }
-    var untersucht = procedure.getValue("Untersucht");
-    if (null != untersucht) {
-      key.append(untersucht.getString());
-    }
-    var genomposition = procedure.getValue("Genomposition");
-    if (null != genomposition) {
-      key.append(genomposition.getString());
-    }
-    var komplexerBiomarker = procedure.getValue("KomplexerBiomarker");
-    if (null != komplexerBiomarker) {
-      key.append(komplexerBiomarker.getString());
-    }
-    return key.toString();
-  }
-
   private List<Procedure> mapVariants(OsMolekulargenetik content, Patient patient) {
     if (null == content.getMolekulargenuntersuchung()) {
       return List.of();
     }
 
     return content.getMolekulargenuntersuchung().stream()
+        .map(mapVariant())
         .map(
-            variant -> {
-              var procedure = new Procedure(onkostarApi);
-              procedure.setFormName("OS.Molekulargenetische Untersuchung");
-              procedure.setPatient(patient);
-              procedure.setValue("Dokumentation", new Item("Dokumentation", "ERW"));
-
-              procedure.setValue("Ergebnis", new Item("Ergebnis", variant.getErgebnis()));
-              procedure.setValue("Untersucht", new Item("Untersucht", variant.getUntersucht()));
-              procedure.setValue(
-                  "Genomposition", new Item("Genomposition", variant.getGenomposition()));
-
-              // SV
-              procedure.setValue("EVChromosom", new Item("EVChromosom", variant.getEvchromosom()));
-              procedure.setValue("EVENSEMBLID", new Item("EVENSEMBLID", variant.getEvensemblid()));
-              procedure.setValue("EVHGNCID", new Item("EVHGNCID", variant.getEvhgncid()));
-              procedure.setValue(
-                  "EVHGNCSymbol", new Item("EVHGNCSymbol", variant.getEvhgncsymbol()));
-              procedure.setValue("EVHGNCName", new Item("EVHGNCName", variant.getEvhgncname()));
-              procedure.setValue("EVStart", new Item("EVStart", variant.getEvstart()));
-              procedure.setValue("EVEnde", new Item("EVEnde", variant.getEvende()));
-
-              procedure.setValue(
-                  "EVAltNucleotide", new Item("EVAltNucleotide", variant.getEvaltnucleotide()));
-              procedure.setValue(
-                  "EVRefNucleotide", new Item("EVRefNucleotide", variant.getEvrefnucleotide()));
-              procedure.setValue("EVReadDepth", new Item("EVReadDepth", variant.getEvreaddepth()));
-              procedure.setValue(
-                  "Allelfrequenz", new Item("Allelfrequenz", variant.getAllelfrequenz()));
-              procedure.setValue("EVdbSNPID", new Item("EVdbSNPID", variant.getEvdbsnpid()));
-
-              // CNV
-              procedure.setValue(
-                  "CopyNumberVariation",
-                  new Item("CopyNumberVariation", variant.getCopynumbervariation()));
-              procedure.setValue(
-                  "CNVChromosom", new Item("CNVChromosom", variant.getCnvchromosom()));
-              procedure.setValue(
-                  "CNVENSEMBLID", new Item("CNENSEMBLID", variant.getCnvensemblid()));
-              procedure.setValue("CNVHGNCID", new Item("CNVHGNCID", variant.getCnvhgncid()));
-              procedure.setValue(
-                  "CNVHGNCSymbol", new Item("CNVHGNCSymbol", variant.getCnvhgncsymbol()));
-              procedure.setValue("CNVHGNCName", new Item("CNVHGNCName", variant.getCnvhgncname()));
-              procedure.setValue(
-                  "CNVTotalCNDouble", new Item("CNVTotalCNDouble", variant.getCnvtotalcndouble()));
-
-              procedure.setValue(
-                  "cDNANomenklatur", new Item("cDNANomenklatur", variant.getCdnanomenklatur()));
-              procedure.setValue(
-                  "ProteinebeneNomenklatur",
-                  new Item("ProteinebeneNomenklatur", variant.getProteinebenenomenklatur()));
-              procedure.setValue(
-                  "Pathogenitaetsklasse",
-                  new Item("Pathogenitaetsklasse", variant.getPathogenitaetsklasse()));
-
-              return procedure;
+            p -> {
+              p.setPatient(patient);
+              return p;
             })
         .collect(Collectors.toList());
+  }
+
+  private Function<Molekulargenuntersuchung, Procedure> mapVariant() {
+    return variant -> {
+      var procedure = new Procedure(onkostarApi);
+      procedure.setFormName("OS.Molekulargenetische Untersuchung");
+      procedure.setValue("Dokumentation", new Item("Dokumentation", "ERW"));
+
+      procedure.setValue("Ergebnis", new Item("Ergebnis", variant.getErgebnis()));
+      procedure.setValue("Untersucht", new Item("Untersucht", variant.getUntersucht()));
+      procedure.setValue(
+          "Pathogenitaetsklasse",
+          new Item("Pathogenitaetsklasse", variant.getPathogenitaetsklasse()));
+
+      // SV
+      procedure.setValue("Genomposition", new Item("Genomposition", variant.getGenomposition()));
+      procedure.setValue(
+          "cDNANomenklatur", new Item("cDNANomenklatur", variant.getCdnanomenklatur()));
+      procedure.setValue(
+          "ProteinebeneNomenklatur",
+          new Item("ProteinebeneNomenklatur", variant.getProteinebenenomenklatur()));
+      procedure.setValue("EVChromosom", new Item("EVChromosom", variant.getEvchromosom()));
+      procedure.setValue("EVENSEMBLID", new Item("EVENSEMBLID", variant.getEvensemblid()));
+      procedure.setValue("EVHGNCID", new Item("EVHGNCID", variant.getEvhgncid()));
+      procedure.setValue("EVHGNCSymbol", new Item("EVHGNCSymbol", variant.getEvhgncsymbol()));
+      procedure.setValue("EVHGNCName", new Item("EVHGNCName", variant.getEvhgncname()));
+      procedure.setValue("EVStart", new Item("EVStart", variant.getEvstart()));
+      procedure.setValue("EVEnde", new Item("EVEnde", variant.getEvende()));
+
+      procedure.setValue(
+          "EVAltNucleotide", new Item("EVAltNucleotide", variant.getEvaltnucleotide()));
+      procedure.setValue(
+          "EVRefNucleotide", new Item("EVRefNucleotide", variant.getEvrefnucleotide()));
+      procedure.setValue("EVReadDepth", new Item("EVReadDepth", variant.getEvreaddepth()));
+      procedure.setValue("Allelfrequenz", new Item("Allelfrequenz", variant.getAllelfrequenz()));
+      procedure.setValue("EVdbSNPID", new Item("EVdbSNPID", variant.getEvdbsnpid()));
+
+      // CNV
+      procedure.setValue(
+          "CopyNumberVariation", new Item("CopyNumberVariation", variant.getCopynumbervariation()));
+      procedure.setValue("CNVChromosom", new Item("CNVChromosom", variant.getCnvchromosom()));
+      procedure.setValue("CNVENSEMBLID", new Item("CNENSEMBLID", variant.getCnvensemblid()));
+      procedure.setValue("CNVHGNCID", new Item("CNVHGNCID", variant.getCnvhgncid()));
+      procedure.setValue("CNVHGNCSymbol", new Item("CNVHGNCSymbol", variant.getCnvhgncsymbol()));
+      procedure.setValue("CNVHGNCName", new Item("CNVHGNCName", variant.getCnvhgncname()));
+      procedure.setValue(
+          "CNVTotalCNDouble", new Item("CNVTotalCNDouble", variant.getCnvtotalcndouble()));
+
+      return procedure;
+    };
   }
 
   private List<Procedure> mapBiomarkers(OsMolekulargenetik content, Patient patient) {
@@ -358,60 +381,40 @@ public class MolGenController {
     }
 
     return content.getBiomarker().stream()
+        .map(mapBiomarker())
         .map(
-            biomarker -> {
-              var procedure = new Procedure(onkostarApi);
-              procedure.setFormName("OS.MolGen Komplexe Biomarker");
-              procedure.setPatient(patient);
-              procedure.setValue(
-                  "KomplexerBiomarker",
-                  new Item("KomplexerBiomarker", biomarker.getKomplexerbiomarker()));
-
-              var seqprozentwert = biomarker.getSeqprozentwert();
-              if (null != seqprozentwert) {
-                procedure.setValue("SeqProzentwert", new Item("SeqProzentwert", seqprozentwert));
-                procedure.setValue("AnalyseMethoden", new Item("AnalyseMethoden", "S"));
-              }
-
-              var score = biomarker.getScore();
-              if (null != score) {
-                procedure.setValue("KomplMarkerScore", new Item("Score", seqprozentwert));
-              }
-
-              var tumormutationalburden = biomarker.getTumormutationalburden();
-              if (null != tumormutationalburden) {
-                procedure.setValue(
-                    "TumorMutationalBurden",
-                    new Item("TumorMutationalBurden", tumormutationalburden));
-              }
-
-              return procedure;
+            p -> {
+              p.setPatient(patient);
+              return p;
             })
         .collect(Collectors.toList());
   }
 
-  static class Response {
-    public boolean success;
-    public int addedVariants;
-    public int removedVariants;
-    public int addedBiomarkers;
-    public int removedBiomarkers;
+  private Function<BiomarkerElement, Procedure> mapBiomarker() {
+    return biomarker -> {
+      var procedure = new Procedure(onkostarApi);
+      procedure.setFormName("OS.MolGen Komplexe Biomarker");
+      procedure.setValue(
+          "KomplexerBiomarker", new Item("KomplexerBiomarker", biomarker.getKomplexerbiomarker()));
 
-    public Response(boolean success) {
-      this.success = success;
-    }
+      var seqprozentwert = biomarker.getSeqprozentwert();
+      if (null != seqprozentwert) {
+        procedure.setValue("SeqProzentwert", new Item("SeqProzentwert", seqprozentwert));
+        procedure.setValue("AnalyseMethoden", new Item("AnalyseMethoden", "S"));
+      }
 
-    public Response(
-        boolean success,
-        int addedVariants,
-        int removedVariants,
-        int addedBiomarkers,
-        int removedBiomarkers) {
-      this.success = success;
-      this.addedVariants = addedVariants;
-      this.removedVariants = removedVariants;
-      this.addedBiomarkers = addedBiomarkers;
-      this.removedBiomarkers = removedBiomarkers;
-    }
+      var score = biomarker.getScore();
+      if (null != score) {
+        procedure.setValue("KomplMarkerScore", new Item("Score", seqprozentwert));
+      }
+
+      var tumormutationalburden = biomarker.getTumormutationalburden();
+      if (null != tumormutationalburden) {
+        procedure.setValue(
+            "TumorMutationalBurden", new Item("TumorMutationalBurden", tumormutationalburden));
+      }
+
+      return procedure;
+    };
   }
 }
