@@ -19,33 +19,23 @@
 
 package dev.dnpm.onkostar.xapi.molgen;
 
-class Response {
-  public boolean success;
-  public int addedVariants;
-  public int updatedVariants;
-  public int removedVariants;
-  public int addedBiomarkers;
-  public int updatedBiomarkers;
-  public int removedBiomarkers;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+@Builder
+public class Response {
+  private boolean success;
+  private int addedVariants;
+  private int updatedVariants;
+  private int removedVariants;
+  private int addedBiomarkers;
+  private int updatedBiomarkers;
+  private int removedBiomarkers;
 
   public Response(boolean success) {
     this.success = success;
-  }
-
-  public Response(
-      boolean success,
-      int addedVariants,
-      int updatedVariants,
-      int removedVariants,
-      int addedBiomarkers,
-      int updatedBiomarkers,
-      int removedBiomarkers) {
-    this.success = success;
-    this.addedVariants = addedVariants;
-    this.updatedVariants = updatedVariants;
-    this.removedVariants = removedVariants;
-    this.addedBiomarkers = addedBiomarkers;
-    this.updatedBiomarkers = updatedBiomarkers;
-    this.removedBiomarkers = removedBiomarkers;
   }
 }

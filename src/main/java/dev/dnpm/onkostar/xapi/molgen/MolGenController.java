@@ -145,15 +145,15 @@ public class MolGenController {
 
     // Varianten
     var variantResponse = this.updateVariants(procedure, content, patient);
-    response.addedVariants = variantResponse.addedVariants;
-    response.updatedVariants = variantResponse.updatedVariants;
-    response.removedVariants = variantResponse.removedVariants;
+    response.setAddedVariants(variantResponse.getAddedVariants());
+    response.setUpdatedVariants(variantResponse.getUpdatedVariants());
+    response.setRemovedVariants(variantResponse.getRemovedVariants());
 
     // Komplexe Biomarker
     var biomarkerResponse = this.updateBiomarkers(procedure, content, patient);
-    response.addedBiomarkers = biomarkerResponse.addedBiomarkers;
-    response.updatedBiomarkers = biomarkerResponse.updatedBiomarkers;
-    response.removedBiomarkers = biomarkerResponse.removedBiomarkers;
+    response.setAddedBiomarkers(biomarkerResponse.getAddedBiomarkers());
+    response.setUpdatedBiomarkers(biomarkerResponse.getUpdatedBiomarkers());
+    response.setRemovedBiomarkers(biomarkerResponse.getRemovedBiomarkers());
 
     try {
       onkostarApi.saveProcedure(procedure, false);
@@ -190,7 +190,7 @@ public class MolGenController {
         // TODO: Remove procedure if sources are correct
         // procedure.removeSubProcedure("MolekulargenetischeUntersuchung", p);
       }
-      response.removedVariants = 0; // proceduresToRemove.size();
+      response.setRemovedVariants(0); // proceduresToRemove.size();
 
       final var proceduresToUpdate =
           mapVariants(content, patient).stream()
@@ -206,7 +206,7 @@ public class MolGenController {
           if (!MolGenUtils.getSubProcedureHash(p)
               .equals(MolGenUtils.getSubProcedureHash(existingProcedure))) {
             MolGenUtils.patchProcedure(existingProcedure, p);
-            response.updatedVariants++;
+            response.setUpdatedVariants(response.getUpdatedVariants() + 1);
           }
         }
       }
@@ -218,12 +218,12 @@ public class MolGenController {
       for (var p : proceduresToAdd) {
         procedure.addSubProcedure("MolekulargenetischeUntersuchung", p);
       }
-      response.addedVariants = proceduresToAdd.size();
+      response.setAddedVariants(proceduresToAdd.size());
     } else {
       for (var p : mapVariants(content, patient)) {
         procedure.addSubProcedure("MolekulargenetischeUntersuchung", p);
       }
-      response.addedVariants = mapVariants(content, patient).size();
+      response.setAddedVariants(mapVariants(content, patient).size());
     }
 
     return response;
@@ -254,7 +254,7 @@ public class MolGenController {
         // TODO: Remove procedure if sources are correct
         // procedure.removeSubProcedure("KomplexeBiomarker", p);
       }
-      response.removedBiomarkers = 0; // proceduresToRemove.size();
+      response.setRemovedBiomarkers(0); // proceduresToRemove.size();
 
       final var proceduresToUpdate =
           mapBiomarkers(content, patient).stream()
@@ -275,7 +275,7 @@ public class MolGenController {
           if (!MolGenUtils.getSubProcedureHash(p)
               .equals(MolGenUtils.getSubProcedureHash(existingProcedure))) {
             MolGenUtils.patchProcedure(existingProcedure, p);
-            response.updatedBiomarkers++;
+            response.setUpdatedBiomarkers(response.getUpdatedBiomarkers() + 1);
           }
         }
       }
@@ -287,12 +287,12 @@ public class MolGenController {
       for (var p : proceduresToAdd) {
         procedure.addSubProcedure("KomplexeBiomarker", p);
       }
-      response.addedBiomarkers = proceduresToAdd.size();
+      response.setAddedBiomarkers(proceduresToAdd.size());
     } else {
       for (var p : mapBiomarkers(content, patient)) {
         procedure.addSubProcedure("KomplexeBiomarker", p);
       }
-      response.addedBiomarkers = mapBiomarkers(content, patient).size();
+      response.setAddedBiomarkers(mapBiomarkers(content, patient).size());
     }
 
     return response;
