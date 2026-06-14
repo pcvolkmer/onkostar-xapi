@@ -29,6 +29,7 @@ import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -38,8 +39,12 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.token.Sha512DigestUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Base64Utils;
 
 @Service("xapiDashboardService")
 public class DashboardService {
@@ -54,6 +59,116 @@ public class DashboardService {
   public DashboardService(IOnkostarApi onkostarApi, final DataSource dataSource) {
     this.onkostarApi = onkostarApi;
     this.jdbcTemplate = new JdbcTemplate(dataSource);
+  }
+
+  @CacheEvict(value = "dashboardEntries", allEntries = true)
+  public void evictDashboardEntriesCache() {
+    log.info("Cleaning dashboard entries cache");
+  }
+
+  @Cacheable(value = "dashboardEntries")
+  public List<DashboardEntry> getDashboardEntries() {
+    var usedPids = new ArrayList<Integer>();
+
+    final var kpa =
+        this.findKlinikAnamneseWithCaseId().stream()
+            .map(
+                procedure -> {
+                  final var caseId = procedure.getValue("FallnummerMV");
+                  if (null == caseId) {
+                    return null;
+                  }
+                  final var date = procedure.getValue("AnmeldedatumMTB");
+                  if (null == date) {
+                    return null;
+                  }
+
+                  final var patient = procedure.getPatient();
+                  final var diseases = procedure.getDiseases();
+
+                  usedPids.add(patient.getId());
+
+                  final var carePlans = this.getCarePlans(patient.getId(), procedure.getId());
+
+                  final var builder =
+                      DashboardEntry.builder()
+                          .caseId(caseId.getString())
+                          .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                          .deceased(null != procedure.getPatient().getDeathdate())
+                          .deceasedAtFirstMtb(this.patientDeceasedAtFirstMtb(patient, carePlans))
+                          .mtb(
+                              DashboardEntry.Mtb.builder()
+                                  .registrationDate(date.getString())
+                                  .carePlans(carePlans)
+                                  .findings(this.getFindings(patient.getId(), procedure.getId()))
+                                  .build())
+                          .mvConsent(this.getMvConsent(patient.getId()))
+                          .broadConsent(this.getBroadConsent(patient.getId()));
+
+                  if (null != diseases && diseases.size() == 1) {
+                    final var disease = diseases.get(0);
+                    builder
+                        .clinicalSubmission(this.getClinicalSubmission(disease))
+                        .genomicSubmission(this.getGenomicSubmission(disease));
+                  }
+
+                  if (null == procedure.getPatient().getDeathdate()
+                      && this.hasTherapyRecommendations(patient.getId(), procedure.getId())) {
+                    try {
+                      final var carePlanDates =
+                          carePlans.stream()
+                              .map(DashboardEntry.CarePlan::getDate)
+                              .collect(Collectors.toList());
+                      final var followUpDates =
+                          this.getFollowUpDates(patient.getId(), procedure.getId());
+
+                      if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
+                        followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
+                        final var nextFollowUpDate =
+                            carePlanDates.stream()
+                                .map(LocalDate::parse)
+                                .map(localDate -> localDate.plusMonths(3))
+                                .max(Comparator.naturalOrder())
+                                .orElse(null);
+                        builder.nextFollowUpDue(
+                            nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
+                      }
+                    } catch (Exception e) {
+                      log.warn(
+                          "Error calculating next follow-up for patient '{}': {}",
+                          patient.getId(),
+                          e.getMessage());
+                    }
+                  }
+
+                  return builder.build();
+                })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    kpa.addAll(
+        this.findMvConsent().stream()
+            .filter(procedure -> !usedPids.contains(procedure.getPatient().getId()))
+            .filter(
+                procedure ->
+                    null != procedure.getPatient().getDiseases()
+                        && !procedure.getPatient().getDiseases().isEmpty())
+            .map(
+                procedure ->
+                    DashboardEntry.builder()
+                        .caseId(
+                            String.format(
+                                "!%s",
+                                Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
+                        .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                        .deceased(procedure.getPatient().getDeathdate() != null)
+                        .mvConsent(this.getMvConsent(procedure.getPatient().getId()))
+                        .broadConsent(this.getBroadConsent(procedure.getPatient().getId()))
+                        .build())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList()));
+
+    return kpa;
   }
 
   public List<Procedure> findKlinikAnamneseWithCaseId() {
