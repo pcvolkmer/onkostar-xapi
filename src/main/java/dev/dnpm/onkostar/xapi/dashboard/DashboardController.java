@@ -19,13 +19,10 @@
 
 package dev.dnpm.onkostar.xapi.dashboard;
 
-import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.token.Sha512DigestUtils;
-import org.springframework.util.Base64Utils;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,114 +37,15 @@ public class DashboardController {
     this.dashboardService = dashboardService;
   }
 
+  @Scheduled(cron = "0 */5 * * * *")
+  void refreshDashboardEntries() {
+    this.dashboardService.evictDashboardEntriesCache();
+    this.dashboardService.getDashboardEntries();
+    log.info("Refreshed dashboard entries cache");
+  }
+
   @GetMapping("/x-api/mv-dashboard")
-  public List<DashboardEntry> getDashboard() {
-    var usedPids = new ArrayList<Integer>();
-
-    final var kpa =
-        dashboardService.findKlinikAnamneseWithCaseId().stream()
-            .map(
-                procedure -> {
-                  final var caseId = procedure.getValue("FallnummerMV");
-                  if (null == caseId) {
-                    return null;
-                  }
-                  final var date = procedure.getValue("AnmeldedatumMTB");
-                  if (null == date) {
-                    return null;
-                  }
-
-                  final var patient = procedure.getPatient();
-                  final var diseases = procedure.getDiseases();
-
-                  usedPids.add(patient.getId());
-
-                  final var carePlans =
-                      dashboardService.getCarePlans(patient.getId(), procedure.getId());
-
-                  final var builder =
-                      DashboardEntry.builder()
-                          .caseId(caseId.getString())
-                          .guid(Base64Utils.encodeToString(procedure.getGuid()))
-                          .deceased(null != procedure.getPatient().getDeathdate())
-                          .deceasedAtFirstMtb(
-                              dashboardService.patientDeceasedAtFirstMtb(patient, carePlans))
-                          .mtb(
-                              DashboardEntry.Mtb.builder()
-                                  .registrationDate(date.getString())
-                                  .carePlans(carePlans)
-                                  .findings(
-                                      dashboardService.getFindings(
-                                          patient.getId(), procedure.getId()))
-                                  .build())
-                          .mvConsent(dashboardService.getMvConsent(patient.getId()))
-                          .broadConsent(dashboardService.getBroadConsent(patient.getId()));
-
-                  if (null != diseases && diseases.size() == 1) {
-                    final var disease = diseases.get(0);
-                    builder
-                        .clinicalSubmission(dashboardService.getClinicalSubmission(disease))
-                        .genomicSubmission(dashboardService.getGenomicSubmission(disease));
-                  }
-
-                  if (null == procedure.getPatient().getDeathdate()
-                      && dashboardService.hasTherapyRecommendations(
-                          patient.getId(), procedure.getId())) {
-                    try {
-                      final var carePlanDates =
-                          carePlans.stream()
-                              .map(DashboardEntry.CarePlan::getDate)
-                              .collect(Collectors.toList());
-                      final var followUpDates =
-                          dashboardService.getFollowUpDates(patient.getId(), procedure.getId());
-
-                      if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
-                        followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
-                        final var nextFollowUpDate =
-                            carePlanDates.stream()
-                                .map(LocalDate::parse)
-                                .map(localDate -> localDate.plusMonths(3))
-                                .max(Comparator.naturalOrder())
-                                .orElse(null);
-                        builder.nextFollowUpDue(
-                            nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
-                      }
-                    } catch (Exception e) {
-                      log.warn(
-                          "Error calculating next follow-up for patient '{}': {}",
-                          patient.getId(),
-                          e.getMessage());
-                    }
-                  }
-
-                  return builder.build();
-                })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-
-    kpa.addAll(
-        dashboardService.findMvConsent().stream()
-            .filter(procedure -> !usedPids.contains(procedure.getPatient().getId()))
-            .filter(
-                procedure ->
-                    null != procedure.getPatient().getDiseases()
-                        && !procedure.getPatient().getDiseases().isEmpty())
-            .map(
-                procedure ->
-                    DashboardEntry.builder()
-                        .caseId(
-                            String.format(
-                                "!%s",
-                                Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
-                        .guid(Base64Utils.encodeToString(procedure.getGuid()))
-                        .deceased(procedure.getPatient().getDeathdate() != null)
-                        .mvConsent(dashboardService.getMvConsent(procedure.getPatient().getId()))
-                        .broadConsent(
-                            dashboardService.getBroadConsent(procedure.getPatient().getId()))
-                        .build())
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList()));
-
-    return kpa;
+  public List<DashboardEntry> getDashboardEntries() {
+    return this.dashboardService.getDashboardEntries();
   }
 }

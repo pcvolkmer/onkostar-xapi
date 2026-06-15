@@ -29,6 +29,7 @@ import de.itc.onkostar.api.filter.IProcedureFilterVisitor;
 import de.itc.onkostar.api.filter.ProcedureDataFilter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -38,8 +39,12 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.token.Sha512DigestUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Base64Utils;
 
 @Service("xapiDashboardService")
 public class DashboardService {
@@ -51,12 +56,127 @@ public class DashboardService {
   private final IOnkostarApi onkostarApi;
   private final JdbcTemplate jdbcTemplate;
 
-  public DashboardService(IOnkostarApi onkostarApi, final DataSource dataSource) {
+  public DashboardService(final IOnkostarApi onkostarApi, final DataSource dataSource) {
     this.onkostarApi = onkostarApi;
     this.jdbcTemplate = new JdbcTemplate(dataSource);
   }
 
-  public List<Procedure> findKlinikAnamneseWithCaseId() {
+  @CacheEvict(value = "dashboardEntries", allEntries = true)
+  public void evictDashboardEntriesCache() {
+    log.info("Cleaning dashboard entries cache");
+  }
+
+  @Cacheable(value = "dashboardEntries")
+  public List<DashboardEntry> getDashboardEntries() {
+    var usedPids = new ArrayList<Integer>();
+
+    final var kpa =
+        this.findKlinikAnamneseWithCaseId().stream()
+            .map(
+                procedure -> {
+                  final var caseId = procedure.getValue("FallnummerMV");
+                  if (null == caseId) {
+                    return null;
+                  }
+                  final var date = procedure.getValue("AnmeldedatumMTB");
+                  if (null == date) {
+                    return null;
+                  }
+
+                  final var patient = procedure.getPatient();
+                  final var diseases = procedure.getDiseases();
+
+                  usedPids.add(patient.getId());
+
+                  final var kpaRelatedCarePlans =
+                      getKpaRelatedCarePlans(patient.getId(), procedure.getId());
+
+                  final var carePlans = this.getCarePlans(kpaRelatedCarePlans);
+
+                  final var builder =
+                      DashboardEntry.builder()
+                          .caseId(caseId.getString())
+                          .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                          .deceased(null != patient.getDeathdate())
+                          .deceasedAtFirstMtb(this.patientDeceasedAtFirstMtb(patient, carePlans))
+                          .mtb(
+                              DashboardEntry.Mtb.builder()
+                                  .registrationDate(date.getString())
+                                  .carePlans(carePlans)
+                                  .findings(this.getFindings(kpaRelatedCarePlans))
+                                  .build())
+                          .mvConsent(this.getMvConsent(patient.getId()))
+                          .broadConsent(this.getBroadConsent(patient.getId()));
+
+                  if (null != diseases && diseases.size() == 1) {
+                    final var disease = diseases.get(0);
+                    builder
+                        .clinicalSubmission(this.getClinicalSubmission(disease))
+                        .genomicSubmission(this.getGenomicSubmission(disease));
+                  }
+
+                  if (null == patient.getDeathdate()
+                      && this.hasTherapyRecommendations(kpaRelatedCarePlans)) {
+                    try {
+                      final var carePlanDates =
+                          carePlans.stream()
+                              .map(DashboardEntry.CarePlan::getDate)
+                              .collect(Collectors.toList());
+                      final var followUpDates =
+                          this.getFollowUpDates(patient.getId(), kpaRelatedCarePlans);
+
+                      if (followUpDates.stream().noneMatch(Map.Entry::getValue)) {
+                        followUpDates.stream().map(Map.Entry::getKey).forEach(carePlanDates::add);
+                        final var nextFollowUpDate =
+                            carePlanDates.stream()
+                                .map(LocalDate::parse)
+                                .map(localDate -> localDate.plusMonths(3))
+                                .max(Comparator.naturalOrder())
+                                .orElse(null);
+                        builder.nextFollowUpDue(
+                            nextFollowUpDate != null ? nextFollowUpDate.toString() : null);
+                      }
+                    } catch (Exception e) {
+                      log.warn(
+                          "Error calculating next follow-up for patient '{}': {}",
+                          patient.getId(),
+                          e.getMessage());
+                    }
+                  }
+
+                  return builder.build();
+                })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    kpa.addAll(
+        this.findMvConsent().stream()
+            .filter(
+                procedure -> {
+                  final var patient = procedure.getPatient();
+                  return !usedPids.contains(patient.getId())
+                      && null != patient.getDiseases()
+                      && !patient.getDiseases().isEmpty();
+                })
+            .map(
+                procedure ->
+                    DashboardEntry.builder()
+                        .caseId(
+                            String.format(
+                                "!%s",
+                                Sha512DigestUtils.shaHex(procedure.getGuid()).substring(0, 7)))
+                        .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                        .deceased(procedure.getPatient().getDeathdate() != null)
+                        .mvConsent(this.getMvConsent(procedure.getPatient().getId()))
+                        .broadConsent(this.getBroadConsent(procedure.getPatient().getId()))
+                        .build())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList()));
+
+    return kpa;
+  }
+
+  private List<Procedure> findKlinikAnamneseWithCaseId() {
     final var sql =
         "SELECT prozedur.id FROM dk_dnpm_kpa JOIN prozedur ON (prozedur.id = dk_dnpm_kpa.id) WHERE geloescht = 0 AND fallnummermv IS NOT NULL AND fallnummermv <> '' AND anmeldedatummtb IS NOT NULL;";
     final var ids = jdbcTemplate.queryForList(sql, Integer.class);
@@ -67,7 +187,7 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
-  public List<Procedure> findMvConsent() {
+  private List<Procedure> findMvConsent() {
     final var sql =
         "SELECT prozedur.id FROM dk_dnpm_consentmv JOIN prozedur ON (prozedur.id = dk_dnpm_consentmv.id) WHERE geloescht = 0 AND date IS NOT NULL AND date <> '';";
     final var ids = jdbcTemplate.queryForList(sql, Integer.class);
@@ -78,7 +198,7 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
-  public DashboardEntry.MvConsent getMvConsent(int patientId) {
+  private DashboardEntry.MvConsent getMvConsent(int patientId) {
     try {
       final var procedures =
           onkostarApi.getProceduresForPatientByForm(patientId, "DNPM ConsentMV", null);
@@ -112,7 +232,21 @@ public class DashboardService {
     return null;
   }
 
-  public DashboardEntry.BroadConsent getBroadConsent(int patientId) {
+  private List<Procedure> getKpaRelatedCarePlans(final int patientId, final int kpaId) {
+    log.info("Getting KPA related care plans for patient {} and KPA {}", patientId, kpaId);
+    return onkostarApi.getProceduresForPatientByForm(
+        patientId,
+        "DNPM Therapieplan",
+        new IProcedureFilter() {
+          @Override
+          public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
+            return iProcedureFilterVisitor.visitProcedureDataFilter(
+                new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
+          }
+        });
+  }
+
+  private DashboardEntry.BroadConsent getBroadConsent(int patientId) {
     try {
       final var procedures =
           onkostarApi.getProceduresForPatientByForm(patientId, "DNPM ConsentMV", null);
@@ -144,19 +278,8 @@ public class DashboardService {
     return null;
   }
 
-  public boolean hasTherapyRecommendations(int patientId, int kpaId) {
-    return onkostarApi
-        .getProceduresForPatientByForm(
-            patientId,
-            "DNPM Therapieplan",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
-              }
-            })
-        .stream()
+  private boolean hasTherapyRecommendations(final List<Procedure> kpaRelatedCarePlans) {
+    return kpaRelatedCarePlans.stream()
         .filter(Objects::nonNull)
         .anyMatch(
             procedure -> {
@@ -166,19 +289,8 @@ public class DashboardService {
             });
   }
 
-  public List<DashboardEntry.CarePlan> getCarePlans(int patientId, int kpaId) {
-    return onkostarApi
-        .getProceduresForPatientByForm(
-            patientId,
-            "DNPM Therapieplan",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
-              }
-            })
-        .stream()
+  private List<DashboardEntry.CarePlan> getCarePlans(final List<Procedure> kpaRelatedCarePlans) {
+    return kpaRelatedCarePlans.stream()
         .filter(Objects::nonNull)
         .filter(
             procedure ->
@@ -200,21 +312,9 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
-  public List<DashboardEntry.Finding> getFindings(int patientId, int kpaId) {
-    final var carePlans =
-        onkostarApi.getProceduresForPatientByForm(
-            patientId,
-            "DNPM Therapieplan",
-            new IProcedureFilter() {
-              @Override
-              public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                return iProcedureFilterVisitor.visitProcedureDataFilter(
-                    new ProcedureDataFilter("refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
-              }
-            });
-
+  private List<DashboardEntry.Finding> getFindings(final List<Procedure> kpaRelatedCarePlans) {
     final var noRecommandationFindings =
-        carePlans.stream()
+        kpaRelatedCarePlans.stream()
             .filter(Objects::nonNull)
             .filter(procedure -> procedure.getValue("refnoempfmolgen") != null)
             .map(procedure -> procedure.getValue("refnoempfmolgen").getInt())
@@ -223,7 +323,7 @@ public class DashboardService {
             .map(this::mapFinding);
 
     final var recommendationFindings =
-        carePlans.stream()
+        kpaRelatedCarePlans.stream()
             .filter(Objects::nonNull)
             .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
             .filter(Objects::nonNull)
@@ -275,21 +375,10 @@ public class DashboardService {
     }
   }
 
-  public List<Map.Entry<String, Boolean>> getFollowUpDates(int patientId, int kpaId) {
+  private List<Map.Entry<String, Boolean>> getFollowUpDates(
+      final int patientId, final List<Procedure> kpaRelatedCarePlans) {
     var einzelempfehlungIds =
-        onkostarApi
-            .getProceduresForPatientByForm(
-                patientId,
-                "DNPM Therapieplan",
-                new IProcedureFilter() {
-                  @Override
-                  public <T> T accept(IProcedureFilterVisitor<T> iProcedureFilterVisitor) {
-                    return iProcedureFilterVisitor.visitProcedureDataFilter(
-                        new ProcedureDataFilter(
-                            "refdnpmklinikanamnese", kpaId, DataOperator.EQUALS));
-                  }
-                })
-            .stream()
+        kpaRelatedCarePlans.stream()
             .filter(Objects::nonNull)
             .map(procedure -> procedure.getSubProceduresMap().get("Einzelempfehlung"))
             .filter(Objects::nonNull)
@@ -314,11 +403,11 @@ public class DashboardService {
         .collect(Collectors.toList());
   }
 
-  public DashboardEntry.Submission getClinicalSubmission(Disease disease) {
+  DashboardEntry.Submission getClinicalSubmission(Disease disease) {
     return getSubmission(disease, "KDK");
   }
 
-  public DashboardEntry.Submission getGenomicSubmission(Disease disease) {
+  DashboardEntry.Submission getGenomicSubmission(Disease disease) {
     return getSubmission(disease, "GRZ");
   }
 
@@ -359,7 +448,7 @@ public class DashboardService {
     }
   }
 
-  public boolean patientDeceasedAtFirstMtb(
+  private boolean patientDeceasedAtFirstMtb(
       Patient patient, List<DashboardEntry.CarePlan> carePlan) {
     if (null == patient
         || null == patient.getDeathdate()
