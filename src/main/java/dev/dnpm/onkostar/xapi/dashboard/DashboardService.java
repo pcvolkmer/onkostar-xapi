@@ -53,6 +53,8 @@ public class DashboardService {
 
   private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
+  private final Set<DashboardEntry> cachedEntries = new HashSet<>();
+
   private final IOnkostarApi onkostarApi;
   private final JdbcTemplate jdbcTemplate;
 
@@ -64,10 +66,16 @@ public class DashboardService {
   @CacheEvict(value = "dashboardEntries", allEntries = true)
   public void evictDashboardEntriesCache() {
     log.info("Cleaning dashboard entries cache");
+    cachedEntries.clear();
   }
 
   @Cacheable(value = "dashboardEntries")
   public List<DashboardEntry> getDashboardEntries() {
+    if (!cachedEntries.isEmpty()) {
+      log.info("Returning cached dashboard entries");
+      return new ArrayList<>(cachedEntries);
+    }
+
     var usedPids = new ArrayList<Integer>();
 
     final var kpa =
@@ -97,6 +105,9 @@ public class DashboardService {
                       DashboardEntry.builder()
                           .caseId(caseId.getString())
                           .guid(Base64Utils.encodeToString(procedure.getGuid()))
+                          .patientName(
+                              String.format(
+                                  "%s %s", patient.getGivenName(), patient.getFamilyName()))
                           .deceased(null != patient.getDeathdate())
                           .deceasedAtFirstMtb(this.patientDeceasedAtFirstMtb(patient, carePlans))
                           .mtb(
@@ -172,6 +183,8 @@ public class DashboardService {
                         .build())
             .filter(Objects::nonNull)
             .collect(Collectors.toList()));
+
+    cachedEntries.addAll(kpa);
 
     return kpa;
   }
