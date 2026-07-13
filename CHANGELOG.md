@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.14](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.13...v0.1.14) (2026-07-13)
+
+
+### Features
+
+* add required data for followup pdf export ([#49](https://github.com/pcvolkmer/onkostar-xapi/issues/49)) ([ed87877](https://github.com/pcvolkmer/onkostar-xapi/commit/ed87877052b7d96f002f6d9bd85f3a72595fac68))
+* add simple Map based cache ([#51](https://github.com/pcvolkmer/onkostar-xapi/issues/51)) ([20b173b](https://github.com/pcvolkmer/onkostar-xapi/commit/20b173b4599f7143ba86fa0872467ed46da733f1))
+* compare SV by allelic frequency ([#50](https://github.com/pcvolkmer/onkostar-xapi/issues/50)) ([7fc2b94](https://github.com/pcvolkmer/onkostar-xapi/commit/7fc2b944ff2c3fae0e105239dd7766f41f9d9dd8))
+* initial implementation to import molgen data ([#45](https://github.com/pcvolkmer/onkostar-xapi/issues/45)) ([95d9209](https://github.com/pcvolkmer/onkostar-xapi/commit/95d9209a72c7567cb475cce8124750b6d4e17644))
+* scheduled dashboard entries cache ([#48](https://github.com/pcvolkmer/onkostar-xapi/issues/48)) ([1cc6531](https://github.com/pcvolkmer/onkostar-xapi/commit/1cc6531fa18ee57603f8080804d5988b3e01225b))
+* update molgen data ([#47](https://github.com/pcvolkmer/onkostar-xapi/issues/47)) ([fb0fffb](https://github.com/pcvolkmer/onkostar-xapi/commit/fb0fffbe29f333ff271d662394d260a07db82a0e))
+
 ## [0.1.13](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.12...v0.1.13) (2026-05-12)
 
 
