@@ -25,7 +25,7 @@ import de.itc.onkostar.api.Procedure;
 import dev.dnpm.onkostar.xapi.consent.idat.ConsentIdat;
 import dev.dnpm.onkostar.xapi.security.DelegatingDataBasedPermissionEvaluator;
 import dev.dnpm.onkostar.xapi.security.PermissionType;
-import dev.pcvolkmer.mv64e.mtb.ConsentProvision;
+import dev.pcvolkmer.mv64e.model.ConsentProvisionType;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.joda.time.LocalDate;
@@ -263,8 +263,8 @@ public class ConsentController {
                 new Item(
                     "sequencing",
                     policyState.getValue()
-                        ? ConsentProvision.PERMIT.toValue()
-                        : ConsentProvision.DENY.toValue())));
+                        ? ConsentProvisionType.PERMIT.getValue()
+                        : ConsentProvisionType.DENY.getValue())));
 
     final var caseIdentification =
         policyStates.stream()
@@ -280,8 +280,8 @@ public class ConsentController {
                 new Item(
                     "caseidentification",
                     policyState.getValue()
-                        ? ConsentProvision.PERMIT.toValue()
-                        : ConsentProvision.DENY.toValue())));
+                        ? ConsentProvisionType.PERMIT.getValue()
+                        : ConsentProvisionType.DENY.getValue())));
 
     final var reidentification =
         policyStates.stream()
@@ -297,8 +297,8 @@ public class ConsentController {
                 new Item(
                     "reidentification",
                     policyState.getValue()
-                        ? ConsentProvision.PERMIT.toValue()
-                        : ConsentProvision.DENY.toValue())));
+                        ? ConsentProvisionType.PERMIT.getValue()
+                        : ConsentProvisionType.DENY.getValue())));
 
     return true;
   }

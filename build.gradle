@@ -35,7 +35,7 @@ ext {
 dependencies {
     implementation files("./libs/onkostar-api-${onkostarVersion}.jar")
 
-    implementation "dev.pcvolkmer.mv64e:mtb-dto:0.2.0"
+    implementation "dev.pcvolkmer.mv64e:mtb-model:0.6.0"
     implementation "org.springframework:spring-beans:${springVersion}"
     implementation "org.springframework:spring-context:${springVersion}"
     implementation "org.springframework:spring-webmvc:${springVersion}"
@@ -45,6 +45,7 @@ dependencies {
     implementation "org.aspectj:aspectjrt:1.6.12"
     implementation "joda-time:joda-time:2.1"
     implementation "commons-codec:commons-codec:1.12"
+    implementation "org.projectlombok:lombok:1.18.30"
 
     compileOnly "org.projectlombok:lombok:1.18.44"
     annotationProcessor "org.projectlombok:lombok:1.18.44"
