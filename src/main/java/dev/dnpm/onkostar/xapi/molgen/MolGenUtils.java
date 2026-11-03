@@ -31,7 +31,6 @@ public class MolGenUtils {
           "Ergebnis",
           "Untersucht",
           // Simple variants
-          "ProteinebeneNomenklatur",
           "Allelfrequenz",
           // CNVs
           "CNVTotalCNDouble",
