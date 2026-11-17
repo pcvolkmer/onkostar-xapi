@@ -40,8 +40,7 @@ public class DashboardController {
   @Scheduled(cron = "0 */5 * * * *")
   void refreshDashboardEntries() {
     this.dashboardService.evictDashboardEntriesCache();
-    this.dashboardService.getDashboardEntries();
-    log.info("Refreshed dashboard entries cache");
+    log.info("Clean dashboard entries cache");
   }
 
   @GetMapping("/x-api/mv-dashboard")
