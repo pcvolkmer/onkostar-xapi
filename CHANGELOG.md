@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.14...v0.1.15) (2026-11-17)
+
+
+### Bug Fixes
+
+* no scheduled dashboard entries cache update ([eb410ef](https://github.com/pcvolkmer/onkostar-xapi/commit/eb410ef93b9060437d02ac4538a72255ce7f75fd))
+
 ## [0.1.14](https://github.com/pcvolkmer/onkostar-xapi/compare/v0.1.13...v0.1.14) (2026-11-03)
 
 
