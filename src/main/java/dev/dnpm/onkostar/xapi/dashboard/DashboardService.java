@@ -105,9 +105,6 @@ public class DashboardService {
                       DashboardEntry.builder()
                           .caseId(caseId.getString())
                           .guid(Base64Utils.encodeToString(procedure.getGuid()))
-                          .patientName(
-                              String.format(
-                                  "%s %s", patient.getGivenName(), patient.getFamilyName()))
                           .deceased(null != patient.getDeathdate())
                           .deceasedAtFirstMtb(this.patientDeceasedAtFirstMtb(patient, carePlans))
                           .mtb(

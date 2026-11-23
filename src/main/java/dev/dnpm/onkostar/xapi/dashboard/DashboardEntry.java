@@ -29,7 +29,6 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class DashboardEntry {
   private final String caseId;
-  private final String patientName;
   private final String guid;
   private final boolean deceased;
   private final boolean deceasedAtFirstMtb;
